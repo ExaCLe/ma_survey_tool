@@ -131,23 +131,33 @@ Vornamen werden im Antwortexport bewusst nicht ausgegeben.
 
 ## Deployment
 
-### Convex
+Empfohlen ist ein gemeinsamer Vercel-Build, der Convex-Funktionen und Next.js-Frontend zusammen deployt.
+
+### Convex vorbereiten
+
+1. In Convex eine Production Deployment anlegen.
+2. In der Convex Production Deployment `ADMIN_PASSWORD` setzen:
 
 ```bash
-npx convex deploy
-npx convex env set ADMIN_PASSWORD ein-langes-passwort
+npx convex env set --prod ADMIN_PASSWORD
 ```
 
-Kopiere die Production Deployment URL aus Convex.
+3. In Convex für die Production Deployment einen Production Deploy Key erzeugen.
 
-### Vercel
+### Vercel konfigurieren
 
 1. Repository mit Vercel verbinden.
-2. Environment Variables setzen:
-   - `NEXT_PUBLIC_CONVEX_URL`: Convex Production URL
-   - `ADMIN_PASSWORD`: dasselbe Admin-Passwort
-3. Build Command: `npm run build`
-4. Output: Next.js Standard
+2. In Vercel als Environment Variable für `Production` setzen:
+   - `CONVEX_DEPLOY_KEY`: Convex Production Deploy Key
+3. Build Command:
+
+```bash
+npx convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'npm run build'
+```
+
+Convex liest dabei `CONVEX_DEPLOY_KEY`, deployt Schema und Funktionen in die zugehörige Production Deployment und stellt `NEXT_PUBLIC_CONVEX_URL` für den Next.js-Build bereit. Du musst `NEXT_PUBLIC_CONVEX_URL` in Vercel nicht separat setzen, solange der Build Command oben verwendet wird.
+
+Für Preview Deployments kannst du zusätzlich einen Convex Preview Deploy Key als `CONVEX_DEPLOY_KEY` für Vercel `Preview` setzen. Für diese einmalige Studie reicht Production meistens aus.
 
 Nach dem Deployment im Adminbereich einloggen, Daten importieren, Studie aktivieren und Links verteilen.
 
