@@ -583,6 +583,10 @@ a {
   border-collapse: collapse;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
 .table th,
 .table td {
   border-bottom: 1px solid var(--border);
@@ -595,6 +599,112 @@ a {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.table tbody tr:nth-child(even) {
+  background: oklch(0.985 0.006 274);
+}
+
+.table tbody tr:hover {
+  background: var(--surface-muted);
+}
+
+.table tbody tr:hover td:first-child {
+  color: var(--accent-strong);
+}
+
+.table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.comparison-table {
+  min-width: 780px;
+}
+
+.analysis-table,
+.heat-table {
+  min-width: 860px;
+}
+
+.score-cell {
+  display: grid;
+  min-width: 150px;
+  gap: 6px;
+}
+
+.score-track,
+.distribution-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.score-track {
+  height: 7px;
+}
+
+.score-fill,
+.distribution-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.distribution-list {
+  display: grid;
+  gap: 18px;
+}
+
+.distribution-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.22fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.distribution-bars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(46px, 1fr));
+  gap: 8px;
+}
+
+.distribution-bar {
+  display: grid;
+  gap: 5px;
+}
+
+.distribution-label,
+.distribution-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1;
+  text-align: center;
+}
+
+.distribution-track {
+  height: 8px;
+}
+
+.distribution-fill {
+  min-width: 3px;
+}
+
+.heat-cell {
+  display: inline-flex;
+  min-width: 54px;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid oklch(0.88 0.025 279);
+  border-radius: 10px;
+  background: oklch(0.97 calc(0.018 + (var(--level, 0) * 0.07)) 279);
+  color: oklch(calc(0.42 - (var(--level, 0) * 0.08)) 0.12 279);
+  font-variant-numeric: tabular-nums;
+  font-weight: 780;
 }
 
 .empty-state,

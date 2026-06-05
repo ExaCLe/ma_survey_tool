@@ -43,7 +43,7 @@ function statusLabel(status) {
 }
 
 function alphaLabel(value) {
-  if (value == null) return "noch keine Daten";
+  if (value == null) return "mindestens zwei Annotator:innen nötig";
   if (value >= 0.8) return "sehr hohe Übereinstimmung";
   if (value >= 0.67) return "substantielle Übereinstimmung";
   if (value >= 0.4) return "moderate Übereinstimmung";
@@ -52,6 +52,29 @@ function alphaLabel(value) {
 
 function formatAlpha(value) {
   return value == null ? "–" : value.toFixed(2);
+}
+
+function formatSignedDelta(value) {
+  if (!Number.isFinite(value)) return "–";
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+function formatStat(value, digits = 2) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "–";
+}
+
+function formatPercent(value) {
+  return Number.isFinite(value) ? `${Math.round(value)}%` : "–";
+}
+
+function scorePercent(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, (value / 7) * 100));
+}
+
+function heatLevel(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, (value - 1) / 6));
 }
 
 function parseCsv(text) {
@@ -288,7 +311,8 @@ function Overview({ password, data, actions, setSection }) {
             </div>
             <div style={{ flex: "1 1 260px" }}>
               <p className="muted">
-                Krippendorffs Alpha wird über alle Bewertungen berechnet. Die Distanz zwischen Likert-Werten wird ordinal über quadrierte Abstände modelliert.
+                Krippendorffs Alpha vergleicht nur Antworten verschiedener Annotator:innen auf dasselbe Essay, denselben Feedbacktext und dasselbe Kriterium.
+                Mit nur einer Bewertung pro Item bleibt Alpha leer.
               </p>
               <button className="btn btn-secondary" type="button" onClick={() => setSection("results")}>
                 Ergebnisse öffnen
@@ -703,6 +727,19 @@ function LinksSection({ data }) {
 }
 
 function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
+  const analytics = data.resultsAnalytics || {};
+  const methodStats = analytics.methodStats || [];
+  const questionStats = analytics.questionStats || [];
+  const methodQuestionStats = analytics.methodQuestionStats || [];
+  const essayMethodStats = analytics.essayMethodStats || [];
+  const ratingDistributions = analytics.ratingDistributions || [];
+  const methodComparisons = analytics.methodComparisons || data.methodComparisons || [];
+  const methodKeys = methodStats.map((row) => row.methodKey);
+  const methodQuestionByKey = new Map(methodQuestionStats.map((row) => [`${row.questionKey}:${row.methodKey}`, row]));
+  const essayKeys = [...new Set(essayMethodStats.map((row) => row.essayKey))];
+  const essayMethodByKey = new Map(essayMethodStats.map((row) => [`${row.essayKey}:${row.methodKey}`, row]));
+  const maxDistributionCount = Math.max(1, ...ratingDistributions.flatMap((row) => row.counts.map((item) => item.count)));
+
   return (
     <div className="content-grid">
       <section className="panel">
@@ -719,30 +756,233 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
 
       <section className="panel">
         <div className="panel-title-row">
-          <h2 className="panel-title">Mittelwerte</h2>
+          <h2 className="panel-title">Methodenprofil</h2>
+          <span className="tag">{data.responseCount} Ratings</span>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Frage</th>
-              <th>Methode</th>
-              <th>Essay</th>
-              <th>N</th>
-              <th>Mittelwert</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.averages.map((row, index) => (
-              <tr key={index}>
-                <td>{row.questionKey}</td>
-                <td>{row.methodKey}</td>
-                <td>{row.essayKey}</td>
-                <td>{row.count}</td>
-                <td>{row.mean.toFixed(2)}</td>
-              </tr>
+        {methodStats.length ? (
+          <div className="table-wrap">
+            <table className="table analysis-table">
+              <thead>
+                <tr>
+                  <th>Methode</th>
+                  <th className="numeric">Ø Score</th>
+                  <th className="numeric">Median</th>
+                  <th className="numeric">SD</th>
+                  <th className="numeric">Bereich</th>
+                  <th className="numeric">≥ 5</th>
+                  <th className="numeric">≥ 6</th>
+                  <th className="numeric">N</th>
+                </tr>
+              </thead>
+              <tbody>
+                {methodStats.map((row) => (
+                  <tr key={row.methodKey}>
+                    <td>
+                      <strong>{row.methodKey}</strong>
+                    </td>
+                    <td>
+                      <div className="score-cell">
+                        <span className="numeric">{formatStat(row.mean)}</span>
+                        <span className="score-track" aria-hidden="true">
+                          <span className="score-fill" style={{ width: `${scorePercent(row.mean)}%` }} />
+                        </span>
+                      </div>
+                    </td>
+                    <td className="numeric">{formatStat(row.median)}</td>
+                    <td className="numeric">{formatStat(row.standardDeviation)}</td>
+                    <td className="numeric">
+                      {formatStat(row.min, 0)}–{formatStat(row.max, 0)}
+                    </td>
+                    <td className="numeric">{formatPercent(row.favorablePercent)}</td>
+                    <td className="numeric">{formatPercent(row.topBoxPercent)}</td>
+                    <td className="numeric">{row.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine gespeicherten Ratings vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Likert-Verteilung</h2>
+        </div>
+        {ratingDistributions.length ? (
+          <div className="distribution-list">
+            {ratingDistributions.map((row) => (
+              <div className="distribution-row" key={row.methodKey}>
+                <div>
+                  <strong>{row.methodKey}</strong>
+                  <span className="muted small"> Ø {formatStat(row.mean)} · N {row.count}</span>
+                </div>
+                <div className="distribution-bars" aria-label={`Likert-Verteilung ${row.methodKey}`}>
+                  {row.counts.map((item) => (
+                    <div className="distribution-bar" key={item.value}>
+                      <span className="distribution-label">{item.value}</span>
+                      <span className="distribution-track">
+                        <span
+                          className="distribution-fill"
+                          style={{ width: `${Math.max(4, (item.count / maxDistributionCount) * 100)}%` }}
+                        />
+                      </span>
+                      <span className="distribution-count">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine Verteilungsdaten vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Kriterien × Methoden</h2>
+        </div>
+        {questionStats.length && methodKeys.length ? (
+          <div className="table-wrap">
+            <table className="table heat-table">
+              <thead>
+                <tr>
+                  <th>Kriterium</th>
+                  {methodKeys.map((methodKey) => (
+                    <th className="numeric" key={methodKey}>{methodKey}</th>
+                  ))}
+                  <th className="numeric">Gesamt Ø</th>
+                </tr>
+              </thead>
+              <tbody>
+                {questionStats.map((question) => (
+                  <tr key={question.questionKey}>
+                    <td>
+                      <strong>{question.questionKey}</strong>
+                    </td>
+                    {methodKeys.map((methodKey) => {
+                      const row = methodQuestionByKey.get(`${question.questionKey}:${methodKey}`);
+                      return (
+                        <td className="numeric" key={methodKey}>
+                          <span className="heat-cell" style={{ "--level": heatLevel(row?.mean || null) }}>
+                            {formatStat(row?.mean)}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="numeric">{formatStat(question.mean)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine Kriterienauswertung vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Methodenvergleich</h2>
+        </div>
+        <p className="muted">
+          Gepaart nach Teilnehmer:in, Essay und Kriterium. Positive Differenzen sprechen für die linke Methode.
+        </p>
+        {methodComparisons.length ? (
+          <div className="table-wrap">
+            <table className="table comparison-table">
+              <thead>
+                <tr>
+                  <th>Kriterium</th>
+                  <th>Vergleich</th>
+                  <th>Besser</th>
+                  <th className="numeric">Ø Δ links</th>
+                  <th className="numeric">Bilanz links</th>
+                  <th className="numeric">N</th>
+                </tr>
+              </thead>
+              <tbody>
+                {methodComparisons.map((row, index) => {
+                  const isTie = row.winner === "Gleichstand";
+                  return (
+                    <tr key={`${row.scopeKey}-${row.methodA}-${row.methodB}-${index}`}>
+                      <td>
+                        <span className={row.scopeKey === "all" ? "tag" : ""}>{row.scopeLabel}</span>
+                      </td>
+                      <td>
+                        <strong>{row.methodA}</strong>
+                        <span className="muted"> vs. </span>
+                        <strong>{row.methodB}</strong>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${isTie ? "warn" : "good"}`}>{row.winner}</span>
+                      </td>
+                      <td className="numeric">{formatSignedDelta(row.meanDelta)}</td>
+                      <td className="numeric">
+                        {row.winsA} / {row.ties} / {row.winsB}
+                      </td>
+                      <td className="numeric">{row.pairedCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine gepaarten Methodenbewertungen vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Essays × Methoden</h2>
+        </div>
+        {essayKeys.length && methodKeys.length ? (
+          <div className="table-wrap">
+            <table className="table heat-table">
+              <thead>
+                <tr>
+                  <th>Essay</th>
+                  {methodKeys.map((methodKey) => (
+                    <th className="numeric" key={methodKey}>{methodKey}</th>
+                  ))}
+                  <th>Beste Methode</th>
+                </tr>
+              </thead>
+              <tbody>
+                {essayKeys.map((essayKey) => {
+                  const rows = methodKeys.map((methodKey) => essayMethodByKey.get(`${essayKey}:${methodKey}`)).filter(Boolean);
+                  const best = [...rows].sort((a, b) => (b.mean || 0) - (a.mean || 0))[0];
+                  return (
+                    <tr key={essayKey}>
+                      <td>
+                        <strong>{essayKey}</strong>
+                        <span className="muted small"> {rows[0]?.topicKey || ""}</span>
+                      </td>
+                      {methodKeys.map((methodKey) => {
+                        const row = essayMethodByKey.get(`${essayKey}:${methodKey}`);
+                        return (
+                          <td className="numeric" key={methodKey}>
+                            <span className="heat-cell" style={{ "--level": heatLevel(row?.mean || null) }}>
+                              {formatStat(row?.mean)}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td>
+                        {best ? <span className="status-pill good">{best.methodKey}</span> : <span className="muted">–</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine Essayauswertung vorhanden.</div>
+        )}
       </section>
 
       <section className="panel">

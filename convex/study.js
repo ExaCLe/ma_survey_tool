@@ -450,32 +450,42 @@ function ordinalAlpha(ratingsByItem) {
   return Math.max(-1, Math.min(1, 1 - observed / expected));
 }
 
+function addParticipantRating(ratingsByItem, itemKey, participantId, value) {
+  const ratings = ratingsByItem.get(itemKey) || new Map();
+  ratings.set(participantId, value);
+  ratingsByItem.set(itemKey, ratings);
+}
+
+function alphaFromParticipantRatings(ratingsByItem) {
+  const valueMap = new Map();
+  for (const [itemKey, ratingsByParticipant] of ratingsByItem.entries()) {
+    valueMap.set(itemKey, [...ratingsByParticipant.values()]);
+  }
+  return ordinalAlpha(valueMap);
+}
+
 function agreement(data) {
   const byQuestion = [];
   const itemMaps = new Map();
-  const participantById = new Map(data.participants.map((participant) => [participant._id, participant]));
   const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
-  const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const overallMap = new Map();
 
   for (const question of data.questions) {
     itemMaps.set(question._id, new Map());
   }
 
   for (const response of data.responses) {
-    const participant = participantById.get(response.participantId);
-    const essay = essayById.get(response.essayId);
     const feedback = feedbackById.get(response.feedbackId);
-    if (!participant || !essay || !feedback) continue;
+    if (!feedback || !Number.isFinite(response.value)) continue;
     const map = itemMaps.get(response.questionId);
     if (!map) continue;
-    const itemKey = `${participant.groupId}:${essay._id}:${feedback._id}`;
-    const values = map.get(itemKey) || [];
-    values.push(response.value);
-    map.set(itemKey, values);
+    const itemKey = `${response.essayId}:${feedback._id}`;
+    addParticipantRating(map, itemKey, response.participantId, response.value);
+    addParticipantRating(overallMap, `${response.questionId}:${itemKey}`, response.participantId, response.value);
   }
 
   for (const question of data.questions) {
-    const alpha = ordinalAlpha(itemMaps.get(question._id) || new Map());
+    const alpha = alphaFromParticipantRatings(itemMaps.get(question._id) || new Map());
     byQuestion.push({
       questionId: question._id,
       key: question.key,
@@ -484,43 +494,285 @@ function agreement(data) {
     });
   }
 
-  const overallMap = new Map();
-  for (const questionMap of itemMaps.values()) {
-    for (const [key, values] of questionMap.entries()) {
-      const existing = overallMap.get(key) || [];
-      existing.push(...values);
-      overallMap.set(key, existing);
-    }
-  }
-
   return {
-    overallAlpha: ordinalAlpha(overallMap),
+    overallAlpha: alphaFromParticipantRatings(overallMap),
     byQuestion
   };
 }
 
-function averages(data) {
+function comparisonBucket(rows, scope, methodA, methodB) {
+  const key = `${scope.sort}:${methodA}:${methodB}`;
+  const existing = rows.get(key);
+  if (existing) return existing;
+  const row = {
+    scopeKey: scope.key,
+    scopeLabel: scope.label,
+    sort: scope.sort,
+    methodA,
+    methodB,
+    winsA: 0,
+    ties: 0,
+    winsB: 0,
+    pairedCount: 0,
+    deltaSum: 0
+  };
+  rows.set(key, row);
+  return row;
+}
+
+function addComparison(rows, scope, methodA, methodB, delta) {
+  const row = comparisonBucket(rows, scope, methodA, methodB);
+  row.pairedCount += 1;
+  row.deltaSum += delta;
+  if (delta > 0) {
+    row.winsA += 1;
+  } else if (delta < 0) {
+    row.winsB += 1;
+  } else {
+    row.ties += 1;
+  }
+}
+
+function sortedValues(values) {
+  return values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+}
+
+function describeValues(values) {
+  const sorted = sortedValues(values);
+  if (sorted.length === 0) {
+    return {
+      count: 0,
+      mean: null,
+      median: null,
+      standardDeviation: null,
+      min: null,
+      max: null,
+      favorablePercent: null,
+      topBoxPercent: null
+    };
+  }
+  const sum = sorted.reduce((total, value) => total + value, 0);
+  const mean = sum / sorted.length;
+  const middle = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  const variance =
+    sorted.length > 1 ? sorted.reduce((total, value) => total + (value - mean) ** 2, 0) / (sorted.length - 1) : null;
+  return {
+    count: sorted.length,
+    mean,
+    median,
+    standardDeviation: variance == null ? null : Math.sqrt(variance),
+    min: sorted[0],
+    max: sorted[sorted.length - 1],
+    favorablePercent: (sorted.filter((value) => value >= 5).length / sorted.length) * 100,
+    topBoxPercent: (sorted.filter((value) => value >= 6).length / sorted.length) * 100
+  };
+}
+
+function groupedRatingRows(data) {
+  const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
+  const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const topicById = new Map(data.topics.map((topic) => [topic._id, topic]));
+  const questionById = new Map(data.questions.map((question) => [question._id, question]));
   const rows = [];
-  for (const question of data.questions) {
-    for (const feedback of data.feedbacks) {
-      const values = data.responses
-        .filter((response) => response.questionId === question._id && response.feedbackId === feedback._id)
-        .map((response) => response.value);
-      if (!values.length) continue;
-      const essay = data.essays.find((item) => item._id === feedback.essayId);
-      const topic = essay ? data.topics.find((item) => item._id === essay.topicId) : null;
-      rows.push({
-        questionKey: question.key,
-        questionText: question.text,
-        methodKey: feedback.methodKey,
-        essayKey: essay?.key || "",
-        topicKey: topic?.key || "",
-        count: values.length,
-        mean: values.reduce((sum, value) => sum + value, 0) / values.length
-      });
+
+  for (const response of data.responses) {
+    const feedback = feedbackById.get(response.feedbackId);
+    const essay = essayById.get(response.essayId);
+    const topic = essay ? topicById.get(essay.topicId) : null;
+    const question = questionById.get(response.questionId);
+    if (!feedback || !essay || !question || !Number.isFinite(response.value)) continue;
+    rows.push({
+      value: response.value,
+      methodKey: feedback.methodKey,
+      questionId: question._id,
+      questionKey: question.key,
+      questionText: question.text,
+      questionOrder: question.order,
+      essayId: essay._id,
+      essayKey: essay.key,
+      essayTitle: essay.title,
+      topicKey: topic?.key || "",
+      topicTitle: topic?.title || ""
+    });
+  }
+
+  return rows;
+}
+
+function pushGroupedValue(groups, key, meta, value) {
+  const group = groups.get(key) || { ...meta, values: [] };
+  group.values.push(value);
+  groups.set(key, group);
+}
+
+function countsByLikert(values) {
+  const counts = [1, 2, 3, 4, 5, 6, 7].map((value) => ({
+    value,
+    count: values.filter((rating) => rating === value).length
+  }));
+  return counts;
+}
+
+function resultsAnalytics(data) {
+  const rows = groupedRatingRows(data);
+  const methodGroups = new Map();
+  const questionGroups = new Map();
+  const methodQuestionGroups = new Map();
+  const essayMethodGroups = new Map();
+
+  for (const row of rows) {
+    pushGroupedValue(methodGroups, row.methodKey, { methodKey: row.methodKey }, row.value);
+    pushGroupedValue(
+      questionGroups,
+      row.questionKey,
+      { questionKey: row.questionKey, questionText: row.questionText, questionOrder: row.questionOrder },
+      row.value
+    );
+    pushGroupedValue(
+      methodQuestionGroups,
+      `${row.questionKey}:${row.methodKey}`,
+      { questionKey: row.questionKey, questionText: row.questionText, questionOrder: row.questionOrder, methodKey: row.methodKey },
+      row.value
+    );
+    pushGroupedValue(
+      essayMethodGroups,
+      `${row.essayKey}:${row.methodKey}`,
+      {
+        essayKey: row.essayKey,
+        essayTitle: row.essayTitle,
+        topicKey: row.topicKey,
+        topicTitle: row.topicTitle,
+        methodKey: row.methodKey
+      },
+      row.value
+    );
+  }
+
+  const methodStats = [...methodGroups.values()]
+    .map((group) => ({
+      methodKey: group.methodKey,
+      ...describeValues(group.values)
+    }))
+    .sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
+
+  const questionStats = [...questionGroups.values()]
+    .map((group) => ({
+      questionKey: group.questionKey,
+      questionText: group.questionText,
+      questionOrder: group.questionOrder,
+      ...describeValues(group.values)
+    }))
+    .sort((a, b) => a.questionOrder - b.questionOrder);
+
+  const methodQuestionStats = [...methodQuestionGroups.values()]
+    .map((group) => ({
+      questionKey: group.questionKey,
+      questionText: group.questionText,
+      questionOrder: group.questionOrder,
+      methodKey: group.methodKey,
+      ...describeValues(group.values)
+    }))
+    .sort((a, b) => a.questionOrder - b.questionOrder || a.methodKey.localeCompare(b.methodKey));
+
+  const essayMethodStats = [...essayMethodGroups.values()]
+    .map((group) => ({
+      essayKey: group.essayKey,
+      essayTitle: group.essayTitle,
+      topicKey: group.topicKey,
+      topicTitle: group.topicTitle,
+      methodKey: group.methodKey,
+      ...describeValues(group.values)
+    }))
+    .sort((a, b) => a.essayKey.localeCompare(b.essayKey) || a.methodKey.localeCompare(b.methodKey));
+
+  const ratingDistributions = [...methodGroups.values()]
+    .map((group) => ({
+      methodKey: group.methodKey,
+      count: group.values.length,
+      mean: describeValues(group.values).mean,
+      counts: countsByLikert(group.values)
+    }))
+    .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+
+  return {
+    methodStats,
+    questionStats,
+    methodQuestionStats,
+    essayMethodStats,
+    ratingDistributions,
+    methodComparisons: methodComparisons(data)
+  };
+}
+
+function methodComparisons(data) {
+  const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
+  const questionById = new Map(data.questions.map((question) => [question._id, question]));
+  const responsesByRatingContext = new Map();
+
+  for (const response of data.responses) {
+    const feedback = feedbackById.get(response.feedbackId);
+    const question = questionById.get(response.questionId);
+    if (!feedback || !question || !Number.isFinite(response.value)) continue;
+    const key = `${response.participantId}:${response.essayId}:${response.questionId}`;
+    const context = responsesByRatingContext.get(key) || {
+      question,
+      methods: new Map()
+    };
+    const values = context.methods.get(feedback.methodKey) || [];
+    values.push(response.value);
+    context.methods.set(feedback.methodKey, values);
+    responsesByRatingContext.set(key, context);
+  }
+
+  const rows = new Map();
+  for (const context of responsesByRatingContext.values()) {
+    const methodValues = [...context.methods.entries()]
+      .map(([methodKey, values]) => ({
+        methodKey,
+        value: values.reduce((sum, value) => sum + value, 0) / values.length
+      }))
+      .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+
+    for (let i = 0; i < methodValues.length; i += 1) {
+      for (let j = i + 1; j < methodValues.length; j += 1) {
+        const methodA = methodValues[i];
+        const methodB = methodValues[j];
+        const delta = methodA.value - methodB.value;
+        const questionScope = {
+          key: context.question.key,
+          label: context.question.key,
+          sort: context.question.order + 1
+        };
+        addComparison(rows, { key: "all", label: "Alle Kriterien", sort: 0 }, methodA.methodKey, methodB.methodKey, delta);
+        addComparison(rows, questionScope, methodA.methodKey, methodB.methodKey, delta);
+      }
     }
   }
-  return rows;
+
+  return [...rows.values()]
+    .map((row) => {
+      const meanDelta = row.deltaSum / row.pairedCount;
+      return {
+        scopeKey: row.scopeKey,
+        scopeLabel: row.scopeLabel,
+        methodA: row.methodA,
+        methodB: row.methodB,
+        winsA: row.winsA,
+        ties: row.ties,
+        winsB: row.winsB,
+        pairedCount: row.pairedCount,
+        meanDelta,
+        winner: meanDelta > 0 ? row.methodA : meanDelta < 0 ? row.methodB : "Gleichstand"
+      };
+    })
+    .sort((a, b) => {
+      const sortA = a.scopeKey === "all" ? 0 : (data.questions.find((question) => question.key === a.scopeKey)?.order || 0) + 1;
+      const sortB = b.scopeKey === "all" ? 0 : (data.questions.find((question) => question.key === b.scopeKey)?.order || 0) + 1;
+      if (sortA !== sortB) return sortA - sortB;
+      const methodSort = a.methodA.localeCompare(b.methodA);
+      return methodSort || a.methodB.localeCompare(b.methodB);
+    });
 }
 
 export const dashboard = query({
@@ -531,6 +783,7 @@ export const dashboard = query({
     const stats = completionStats(data);
     const validationErrors = validateData(data);
     const alpha = agreement(data);
+    const analytics = resultsAnalytics(data);
     return {
       settings: data.settings,
       groups: data.groups,
@@ -548,7 +801,8 @@ export const dashboard = query({
       },
       validationErrors,
       agreement: alpha,
-      averages: averages(data)
+      resultsAnalytics: analytics,
+      methodComparisons: analytics.methodComparisons
     };
   }
 });
