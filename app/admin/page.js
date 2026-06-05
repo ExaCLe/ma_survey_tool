@@ -932,7 +932,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
     csvLine([
       "methodKey",
       "displayName",
-      "humanMean",
+      "humanOverallHelpfulness",
       "humanRank",
       "humanCount",
       "autoApproachKey",
@@ -968,7 +968,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
       "humanBtRank",
       "humanBtAbility",
       "humanBtScore",
-      "humanMean",
+      "humanOverallHelpfulness",
       "humanComparisons",
       "humanWins",
       "humanLosses",
@@ -1008,7 +1008,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
       "participantPseudonym",
       "methodKey",
       "humanRank",
-      "humanMean",
+      "humanOverallHelpfulness",
       "humanBtAbility",
       "humanComparisons",
       "automaticSurveyRank",
@@ -1138,7 +1138,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
           </div>
         </div>
         <p className="muted">
-          Human-Ranking: pro Annotator:in und Essay werden alle Kriterien zu einem Overall-Score gemittelt; daraus entstehen paarweise Siege/Ties und Bradley-Terry-Ability-Werte. Automatik: importierte Overall-Ränge aus der Automatic-Ranking-CSV.
+          Human-Ranking: pro Annotator:in und Essay wird ausschließlich die letzte Frage zur Gesamt-Hilfreichkeit verwendet; daraus entstehen paarweise Siege/Ties und Bradley-Terry-Ability-Werte. Automatik: importierte Overall-Ränge aus der Automatic-Ranking-CSV.
         </p>
         {humanRankingComparison.note && <div className="notice" style={{ marginBottom: 14 }}>{humanRankingComparison.note}</div>}
         {humanOverallRows.length ? (
@@ -1149,7 +1149,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
                   <th>Methode</th>
                   <th className="numeric">Human BT Rang</th>
                   <th className="numeric">Human Ability</th>
-                  <th className="numeric">Human Ø</th>
+                  <th className="numeric">Gesamt hilfreich</th>
                   <th className="numeric">Bilanz</th>
                   <th className="numeric">Auto Survey Rang</th>
                   <th className="numeric">Auto Global Rang</th>
@@ -1206,7 +1206,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
                           <th>Methode</th>
                           <th className="numeric">Essay BT Rang</th>
                           <th className="numeric">Essay Ability</th>
-                          <th className="numeric">Human Ø</th>
+                          <th className="numeric">Gesamt hilfreich</th>
                           <th className="numeric">Bilanz</th>
                           <th className="numeric">Auto Survey Rang</th>
                           <th className="numeric">Auto Ability</th>
@@ -1237,7 +1237,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
                           <th>Annotator:in</th>
                           <th>Methode</th>
                           <th className="numeric">Indiv. Rang</th>
-                          <th className="numeric">Overall Ø</th>
+                          <th className="numeric">Gesamt hilfreich</th>
                           <th className="numeric">Auto Survey Rang</th>
                         </tr>
                       </thead>
@@ -1293,7 +1293,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
                 <thead>
                   <tr>
                     <th>Methode</th>
-                    <th className="numeric">Human Ø</th>
+                    <th className="numeric">Gesamt hilfreich</th>
                     <th className="numeric">Human Rang</th>
                     <th className="numeric">Auto Rang</th>
                     <th className="numeric">Δ Rang</th>

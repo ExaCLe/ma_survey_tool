@@ -118,7 +118,7 @@ Optionale Mapping- und Metadatenspalten:
 
 Zeilen mit `surveyMethodKey` werden in `Ergebnisse` gegen die Human-Ratings gematcht. Zeilen ohne `surveyMethodKey` bleiben als zusätzliche automatische Ansätze gespeichert und werden in der Importvorschau gezählt.
 
-Unter `Ergebnisse` -> `Bradley-Terry Rankingvergleich` wird für die Human-Ratings ein explizites Ranking berechnet: pro Annotator:in und Essay werden alle Likert-Kriterien zu einem Overall-Score gemittelt, daraus werden paarweise Siege/Ties zwischen Methoden gebildet, und daraus werden Bradley-Terry-Ability-Werte geschätzt. Zusätzlich gibt es eine Essay-Ansicht mit aggregiertem Essay-Ranking und den individuellen Annotator:innen-Rankings pro Essay. Die aktuell importierte Automatic-Ranking-CSV enthält nur Overall-Methodenränge; diese Overall-Automatikränge werden deshalb als Vergleichsspalten neben Overall-, Essay- und Annotator:innen-Rankings angezeigt.
+Unter `Ergebnisse` -> `Bradley-Terry Rankingvergleich` wird für die Human-Ratings ein explizites Ranking berechnet: pro Annotator:in und Essay wird ausschließlich die letzte Frage `gesamt_hilfreich` zur Gesamt-Hilfreichkeit verwendet, daraus werden paarweise Siege/Ties zwischen Methoden gebildet, und daraus werden Bradley-Terry-Ability-Werte geschätzt. Zusätzlich gibt es eine Essay-Ansicht mit aggregiertem Essay-Ranking und den individuellen Annotator:innen-Rankings pro Essay. Die aktuell importierte Automatic-Ranking-CSV enthält nur Overall-Methodenränge; diese Overall-Automatikränge werden deshalb als Vergleichsspalten neben Overall-, Essay- und Annotator:innen-Rankings angezeigt.
 
 ## Beispieldateien neu erzeugen
 

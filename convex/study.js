@@ -4,6 +4,7 @@ import { internalAction, mutation, query } from "./_generated/server";
 
 const STUDY_KEY = "single-study";
 const DEFAULT_NOTIFICATION_EMAIL = "leon.biermann@gmx.net";
+const OVERALL_HELPFULNESS_QUESTION_KEY = "gesamt_hilfreich";
 const FIXED_QUESTIONS = [
   {
     key: "verstaendlichkeit",
@@ -676,7 +677,18 @@ function describePairwiseRanking(methodKeys, valuesByMethod, comparisons) {
   );
 }
 
-function automaticRankingComparison(data, methodStats) {
+function automaticRankingComparison(data) {
+  const methodGroups = new Map();
+  for (const row of groupedRatingRows(data)) {
+    if (row.questionKey !== OVERALL_HELPFULNESS_QUESTION_KEY) continue;
+    pushGroupedValue(methodGroups, row.methodKey, { methodKey: row.methodKey }, row.value);
+  }
+  const methodStats = [...methodGroups.values()]
+    .map((group) => ({
+      methodKey: group.methodKey,
+      ...describeValues(group.values)
+    }))
+    .sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
   const automaticBySurveyMethod = new Map(
     data.automaticRankings
       .filter((ranking) => ranking.surveyMethodKey)
@@ -772,6 +784,7 @@ function humanRankingComparison(data) {
   const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
   const participantById = new Map(data.participants.map((participant) => [participant._id, participant]));
   const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const questionById = new Map(data.questions.map((question) => [question._id, question]));
   const topicById = new Map(data.topics.map((topic) => [topic._id, topic]));
   const automaticByMethod = automaticRowsBySurveyMethod(data);
   const methodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
@@ -781,7 +794,8 @@ function humanRankingComparison(data) {
     const feedback = feedbackById.get(response.feedbackId);
     const participant = participantById.get(response.participantId);
     const essay = essayById.get(response.essayId);
-    if (!feedback || !participant || !essay || !Number.isFinite(response.value)) continue;
+    const question = questionById.get(response.questionId);
+    if (!feedback || !participant || !essay || question?.key !== OVERALL_HELPFULNESS_QUESTION_KEY || !Number.isFinite(response.value)) continue;
     const key = `${response.participantId}:${response.essayId}`;
     const context = ratingContexts.get(key) || {
       participant,
@@ -902,7 +916,7 @@ function humanRankingComparison(data) {
     comparisonCount: overallComparisons.length,
     note:
       data.automaticRankings.some((ranking) => ranking.surveyMethodKey)
-        ? "Automatic ranks are overall method-level ranks from the imported automatic CSV. No per-essay automatic ranks are present in that CSV."
+        ? "Human ranks use only the final overall-helpfulness question. Automatic ranks are overall method-level ranks from the imported automatic CSV; no per-essay automatic ranks are present in that CSV."
         : "Import automatic rankings to compare human ranks against automatic ranks."
   };
 }
@@ -1040,7 +1054,7 @@ function resultsAnalytics(data) {
     essayMethodStats,
     ratingDistributions,
     methodComparisons: methodComparisons(data),
-    automaticRankingComparison: automaticRankingComparison(data, methodStats),
+    automaticRankingComparison: automaticRankingComparison(data),
     humanRankingComparison: humanRankingComparison(data)
   };
 }
