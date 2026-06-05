@@ -62,6 +62,48 @@ export default defineSchema({
     setupOrder: v.number()
   }).index("by_essay", ["essayId"]),
 
+  automaticMethodRankings: defineTable({
+    surveyMethodKey: v.optional(v.string()),
+    autoApproachKey: v.string(),
+    displayName: v.string(),
+    isCurrentManualAnnotationMethod: v.boolean(),
+    materialFeedbackRows: v.optional(v.number()),
+    combinedRank: v.number(),
+    combinedAbility: v.number(),
+    combinedScore: v.number(),
+    combinedWins: v.number(),
+    combinedLosses: v.number(),
+    combinedTies: v.number(),
+    combinedComparisons: v.number(),
+    gemmaRank: v.optional(v.number()),
+    gemmaAbility: v.optional(v.number()),
+    gemmaScore: v.optional(v.number()),
+    gemmaWins: v.optional(v.number()),
+    gemmaLosses: v.optional(v.number()),
+    gemmaTies: v.optional(v.number()),
+    gemmaComparisons: v.optional(v.number()),
+    llamaRank: v.optional(v.number()),
+    llamaAbility: v.optional(v.number()),
+    llamaScore: v.optional(v.number()),
+    llamaWins: v.optional(v.number()),
+    llamaLosses: v.optional(v.number()),
+    llamaTies: v.optional(v.number()),
+    llamaComparisons: v.optional(v.number()),
+    openaiRank: v.optional(v.number()),
+    openaiAbility: v.optional(v.number()),
+    openaiScore: v.optional(v.number()),
+    openaiWins: v.optional(v.number()),
+    openaiLosses: v.optional(v.number()),
+    openaiTies: v.optional(v.number()),
+    openaiComparisons: v.optional(v.number()),
+    rankingGeneratedAt: v.optional(v.string()),
+    rankingDescription: v.optional(v.string()),
+    rankingSourceModels: v.optional(v.string()),
+    importedAt: v.number()
+  })
+    .index("by_survey_method", ["surveyMethodKey"])
+    .index("by_auto_approach", ["autoApproachKey"]),
+
   questions: defineTable({
     key: v.string(),
     text: v.string(),

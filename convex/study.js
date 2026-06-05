@@ -55,6 +55,7 @@ const TABLES = [
   "participants",
   "groups",
   "feedbacks",
+  "automaticMethodRankings",
   "essays",
   "topics",
   "questions",
@@ -298,10 +299,11 @@ async function getStudyData(ctx, options = {}) {
   const topics = (await collect(ctx, "topics")).sort((a, b) => a.order - b.order);
   const essays = await collect(ctx, "essays");
   const feedbacks = await collect(ctx, "feedbacks");
+  const automaticRankings = (await collect(ctx, "automaticMethodRankings")).sort((a, b) => a.combinedRank - b.combinedRank);
   const questions = (await collect(ctx, "questions")).sort((a, b) => a.order - b.order);
   const assignments = await collect(ctx, "groupEssayAssignments");
   const responses = await collect(ctx, "responses");
-  return { settings, groups, participants, topics, essays, feedbacks, questions, assignments, responses };
+  return { settings, groups, participants, topics, essays, feedbacks, automaticRankings, questions, assignments, responses };
 }
 
 async function resolveTopicPromptImage(ctx, topic) {
@@ -569,6 +571,342 @@ function describeValues(values) {
   };
 }
 
+function spearmanCorrelation(pairs) {
+  if (pairs.length < 2) return null;
+  const sumSquaredDelta = pairs.reduce((sum, pair) => sum + (pair.humanRank - pair.automaticRank) ** 2, 0);
+  const n = pairs.length;
+  return 1 - (6 * sumSquaredDelta) / (n * (n ** 2 - 1));
+}
+
+function rankRows(rows, scoreKey, rankKey = "rank", descending = true) {
+  const ranked = [...rows].sort((a, b) => {
+    const scoreA = Number.isFinite(a[scoreKey]) ? a[scoreKey] : descending ? -Infinity : Infinity;
+    const scoreB = Number.isFinite(b[scoreKey]) ? b[scoreKey] : descending ? -Infinity : Infinity;
+    return descending ? scoreB - scoreA || a.methodKey.localeCompare(b.methodKey) : scoreA - scoreB || a.methodKey.localeCompare(b.methodKey);
+  });
+  let previousScore = null;
+  let previousRank = 0;
+  return ranked.map((row, index) => {
+    const score = row[scoreKey];
+    const rank = Number.isFinite(score) && score === previousScore ? previousRank : index + 1;
+    previousScore = score;
+    previousRank = rank;
+    return { ...row, [rankKey]: rank };
+  });
+}
+
+function fitBradleyTerry(methodKeys, comparisons) {
+  if (methodKeys.length === 0) return new Map();
+  const wins = new Map(methodKeys.map((methodKey) => [methodKey, 0]));
+  const pairCounts = new Map();
+  for (const comparison of comparisons) {
+    wins.set(comparison.methodA, (wins.get(comparison.methodA) || 0) + comparison.scoreA);
+    wins.set(comparison.methodB, (wins.get(comparison.methodB) || 0) + comparison.scoreB);
+    const pairKey = [comparison.methodA, comparison.methodB].sort().join("\u0000");
+    pairCounts.set(pairKey, (pairCounts.get(pairKey) || 0) + comparison.scoreA + comparison.scoreB);
+  }
+
+  let abilities = new Map(methodKeys.map((methodKey) => [methodKey, 1]));
+  for (let iteration = 0; iteration < 80; iteration += 1) {
+    const nextAbilities = new Map();
+    for (const methodKey of methodKeys) {
+      const winCount = wins.get(methodKey) || 0;
+      let denominator = 0;
+      for (const otherMethodKey of methodKeys) {
+        if (otherMethodKey === methodKey) continue;
+        const pairKey = [methodKey, otherMethodKey].sort().join("\u0000");
+        const count = pairCounts.get(pairKey) || 0;
+        if (!count) continue;
+        denominator += count / ((abilities.get(methodKey) || 1) + (abilities.get(otherMethodKey) || 1));
+      }
+      nextAbilities.set(methodKey, denominator ? Math.max(1e-9, winCount / denominator) : 1e-9);
+    }
+    const meanAbility = [...nextAbilities.values()].reduce((sum, value) => sum + value, 0) / methodKeys.length || 1;
+    abilities = new Map([...nextAbilities.entries()].map(([methodKey, ability]) => [methodKey, ability / meanAbility]));
+  }
+  return abilities;
+}
+
+function describePairwiseRanking(methodKeys, valuesByMethod, comparisons) {
+  const abilities = fitBradleyTerry(methodKeys, comparisons);
+  const counts = new Map(
+    methodKeys.map((methodKey) => [
+      methodKey,
+      {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        comparisons: 0
+      }
+    ])
+  );
+  for (const comparison of comparisons) {
+    const countA = counts.get(comparison.methodA);
+    const countB = counts.get(comparison.methodB);
+    if (!countA || !countB) continue;
+    countA.comparisons += 1;
+    countB.comparisons += 1;
+    if (comparison.scoreA > comparison.scoreB) {
+      countA.wins += 1;
+      countB.losses += 1;
+    } else if (comparison.scoreA < comparison.scoreB) {
+      countA.losses += 1;
+      countB.wins += 1;
+    } else {
+      countA.ties += 1;
+      countB.ties += 1;
+    }
+  }
+  return rankRows(
+    methodKeys.map((methodKey) => {
+      const values = valuesByMethod.get(methodKey) || [];
+      const summary = describeValues(values);
+      const ability = abilities.get(methodKey) || 0;
+      return {
+        methodKey,
+        mean: summary.mean,
+        count: summary.count,
+        btAbility: ability,
+        btScore: ability > 0 ? Math.log(ability) : null,
+        ...(counts.get(methodKey) || { wins: 0, losses: 0, ties: 0, comparisons: 0 })
+      };
+    }),
+    "btAbility",
+    "btRank"
+  );
+}
+
+function automaticRankingComparison(data, methodStats) {
+  const automaticBySurveyMethod = new Map(
+    data.automaticRankings
+      .filter((ranking) => ranking.surveyMethodKey)
+      .map((ranking) => [ranking.surveyMethodKey, ranking])
+  );
+  const feedbackMethodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+  const humanRankByMethod = new Map();
+  const sortedHumanStats = [...methodStats].sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
+  for (let index = 0; index < sortedHumanStats.length; index += 1) {
+    humanRankByMethod.set(sortedHumanStats[index].methodKey, index + 1);
+  }
+
+  const rows = sortedHumanStats.map((method) => {
+    const automatic = automaticBySurveyMethod.get(method.methodKey);
+    const humanRank = humanRankByMethod.get(method.methodKey);
+    return {
+      methodKey: method.methodKey,
+      humanMean: method.mean,
+      humanRank,
+      humanCount: method.count,
+      autoApproachKey: automatic?.autoApproachKey || null,
+      displayName: automatic?.displayName || method.methodKey,
+      automaticCombinedRank: automatic?.combinedRank ?? null,
+      automaticCombinedAbility: automatic?.combinedAbility ?? null,
+      automaticCombinedScore: automatic?.combinedScore ?? null,
+      rankDelta:
+        automatic && Number.isFinite(humanRank) && Number.isFinite(automatic.combinedRank)
+          ? humanRank - automatic.combinedRank
+          : null,
+      gemmaRank: automatic?.gemmaRank ?? null,
+      llamaRank: automatic?.llamaRank ?? null,
+      openaiRank: automatic?.openaiRank ?? null
+    };
+  });
+
+  const rowsWithAutomaticRank = rows
+    .filter((row) => Number.isFinite(row.humanRank) && Number.isFinite(row.automaticCombinedRank))
+    .sort((a, b) => a.automaticCombinedRank - b.automaticCombinedRank || a.methodKey.localeCompare(b.methodKey));
+  const automaticRankWithinMappedMethods = new Map();
+  for (let index = 0; index < rowsWithAutomaticRank.length; index += 1) {
+    automaticRankWithinMappedMethods.set(rowsWithAutomaticRank[index].methodKey, index + 1);
+  }
+  const rankPairs = rowsWithAutomaticRank.map((row) => ({
+    humanRank: row.humanRank,
+    automaticRank: automaticRankWithinMappedMethods.get(row.methodKey)
+  }));
+
+  const mappedSurveyMethodKeys = data.automaticRankings
+    .filter((ranking) => ranking.surveyMethodKey)
+    .map((ranking) => ranking.surveyMethodKey)
+    .sort((a, b) => a.localeCompare(b));
+  const missingSurveyMethodKeys = feedbackMethodKeys.filter((methodKey) => !automaticBySurveyMethod.has(methodKey));
+  const unmappedAutomaticApproaches = data.automaticRankings
+    .filter((ranking) => !ranking.surveyMethodKey)
+    .map((ranking) => ranking.autoApproachKey)
+    .sort((a, b) => a.localeCompare(b));
+
+  return {
+    rows,
+    spearman: spearmanCorrelation(rankPairs),
+    mappedCount: mappedSurveyMethodKeys.length,
+    totalAutomaticRows: data.automaticRankings.length,
+    mappedSurveyMethodKeys,
+    missingSurveyMethodKeys,
+    unmappedAutomaticApproaches
+  };
+}
+
+function automaticRowsBySurveyMethod(data) {
+  const mappedAutomaticRows = data.automaticRankings
+    .filter((ranking) => ranking.surveyMethodKey)
+    .sort((a, b) => a.combinedRank - b.combinedRank || a.surveyMethodKey.localeCompare(b.surveyMethodKey));
+  const surveyRankByMethod = new Map();
+  for (let index = 0; index < mappedAutomaticRows.length; index += 1) {
+    surveyRankByMethod.set(mappedAutomaticRows[index].surveyMethodKey, index + 1);
+  }
+  return new Map(
+    mappedAutomaticRows.map((ranking) => [
+      ranking.surveyMethodKey,
+      {
+        automaticSurveyRank: surveyRankByMethod.get(ranking.surveyMethodKey),
+        automaticCombinedRank: ranking.combinedRank,
+        automaticCombinedAbility: ranking.combinedAbility,
+        automaticCombinedScore: ranking.combinedScore,
+        autoApproachKey: ranking.autoApproachKey,
+        displayName: ranking.displayName
+      }
+    ])
+  );
+}
+
+function humanRankingComparison(data) {
+  const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
+  const participantById = new Map(data.participants.map((participant) => [participant._id, participant]));
+  const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const topicById = new Map(data.topics.map((topic) => [topic._id, topic]));
+  const automaticByMethod = automaticRowsBySurveyMethod(data);
+  const methodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+  const ratingContexts = new Map();
+
+  for (const response of data.responses) {
+    const feedback = feedbackById.get(response.feedbackId);
+    const participant = participantById.get(response.participantId);
+    const essay = essayById.get(response.essayId);
+    if (!feedback || !participant || !essay || !Number.isFinite(response.value)) continue;
+    const key = `${response.participantId}:${response.essayId}`;
+    const context = ratingContexts.get(key) || {
+      participant,
+      essay,
+      methods: new Map()
+    };
+    const values = context.methods.get(feedback.methodKey) || [];
+    values.push(response.value);
+    context.methods.set(feedback.methodKey, values);
+    ratingContexts.set(key, context);
+  }
+
+  const overallValuesByMethod = new Map(methodKeys.map((methodKey) => [methodKey, []]));
+  const overallComparisons = [];
+  const essayValuesByMethod = new Map();
+  const essayComparisons = new Map();
+  const annotatorRankingsByEssay = new Map();
+
+  for (const context of ratingContexts.values()) {
+    const methodValues = [...context.methods.entries()]
+      .map(([methodKey, values]) => ({
+        methodKey,
+        value: values.reduce((sum, value) => sum + value, 0) / values.length
+      }))
+      .filter((row) => Number.isFinite(row.value))
+      .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+    if (methodValues.length < 2) continue;
+
+    const essayKey = context.essay.key;
+    if (!essayValuesByMethod.has(essayKey)) essayValuesByMethod.set(essayKey, new Map());
+    if (!essayComparisons.has(essayKey)) essayComparisons.set(essayKey, []);
+    if (!annotatorRankingsByEssay.has(essayKey)) annotatorRankingsByEssay.set(essayKey, []);
+
+    for (const row of methodValues) {
+      const overallValues = overallValuesByMethod.get(row.methodKey) || [];
+      overallValues.push(row.value);
+      overallValuesByMethod.set(row.methodKey, overallValues);
+      const essayValues = essayValuesByMethod.get(essayKey);
+      const values = essayValues.get(row.methodKey) || [];
+      values.push(row.value);
+      essayValues.set(row.methodKey, values);
+    }
+
+    const participantRanking = rankRows(methodValues, "value", "humanRank").map((row) => ({
+      participantId: context.participant._id,
+      participantPseudonym: context.participant.pseudonym,
+      participantCode: context.participant.code,
+      methodKey: row.methodKey,
+      humanRank: row.humanRank,
+      mean: row.value,
+      ...(automaticByMethod.get(row.methodKey) || {})
+    }));
+    annotatorRankingsByEssay.get(essayKey).push(...participantRanking);
+
+    for (let i = 0; i < methodValues.length; i += 1) {
+      for (let j = i + 1; j < methodValues.length; j += 1) {
+        const methodA = methodValues[i];
+        const methodB = methodValues[j];
+        const comparison =
+          methodA.value > methodB.value
+            ? { methodA: methodA.methodKey, methodB: methodB.methodKey, scoreA: 1, scoreB: 0 }
+            : methodA.value < methodB.value
+              ? { methodA: methodA.methodKey, methodB: methodB.methodKey, scoreA: 0, scoreB: 1 }
+              : { methodA: methodA.methodKey, methodB: methodB.methodKey, scoreA: 0.5, scoreB: 0.5 };
+        overallComparisons.push(comparison);
+        essayComparisons.get(essayKey).push(comparison);
+      }
+    }
+  }
+
+  const overallRows = describePairwiseRanking(methodKeys, overallValuesByMethod, overallComparisons).map((row) => ({
+    ...row,
+    ...(automaticByMethod.get(row.methodKey) || {}),
+    rankDelta:
+      automaticByMethod.has(row.methodKey) && Number.isFinite(row.btRank)
+        ? row.btRank - automaticByMethod.get(row.methodKey).automaticSurveyRank
+        : null
+  }));
+
+  const essayRows = [...essayValuesByMethod.entries()]
+    .map(([essayKey, valuesByMethod]) => {
+      const essay = data.essays.find((item) => item.key === essayKey);
+      const topic = essay ? topicById.get(essay.topicId) : null;
+      const essayMethodKeys = [...valuesByMethod.keys()].sort((a, b) => a.localeCompare(b));
+      const rows = describePairwiseRanking(essayMethodKeys, valuesByMethod, essayComparisons.get(essayKey) || []).map((row) => ({
+        ...row,
+        ...(automaticByMethod.get(row.methodKey) || {}),
+        rankDelta:
+          automaticByMethod.has(row.methodKey) && Number.isFinite(row.btRank)
+            ? row.btRank - automaticByMethod.get(row.methodKey).automaticSurveyRank
+            : null
+      }));
+      return {
+        essayId: essay?._id || "",
+        essayKey,
+        essayTitle: essay?.title || essayKey,
+        topicKey: topic?.key || "",
+        topicTitle: topic?.title || "",
+        methodRows: rows,
+        annotatorRows: (annotatorRankingsByEssay.get(essayKey) || []).sort(
+          (a, b) =>
+            a.participantCode.localeCompare(b.participantCode) ||
+            a.humanRank - b.humanRank ||
+            a.methodKey.localeCompare(b.methodKey)
+        )
+      };
+    })
+    .sort((a, b) => a.essayKey.localeCompare(b.essayKey));
+
+  const rowsWithAutomaticRank = overallRows
+    .filter((row) => Number.isFinite(row.btRank) && Number.isFinite(row.automaticSurveyRank))
+    .map((row) => ({ humanRank: row.btRank, automaticRank: row.automaticSurveyRank }));
+
+  return {
+    overallRows,
+    essayRows,
+    spearman: spearmanCorrelation(rowsWithAutomaticRank),
+    comparisonCount: overallComparisons.length,
+    note:
+      data.automaticRankings.some((ranking) => ranking.surveyMethodKey)
+        ? "Automatic ranks are overall method-level ranks from the imported automatic CSV. No per-essay automatic ranks are present in that CSV."
+        : "Import automatic rankings to compare human ranks against automatic ranks."
+  };
+}
+
 function groupedRatingRows(data) {
   const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
   const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
@@ -701,8 +1039,60 @@ function resultsAnalytics(data) {
     methodQuestionStats,
     essayMethodStats,
     ratingDistributions,
-    methodComparisons: methodComparisons(data)
+    methodComparisons: methodComparisons(data),
+    automaticRankingComparison: automaticRankingComparison(data, methodStats),
+    humanRankingComparison: humanRankingComparison(data)
   };
+}
+
+function editableResponseRows(data) {
+  const participantById = new Map(data.participants.map((participant) => [participant._id, participant]));
+  const groupById = new Map(data.groups.map((group) => [group._id, group]));
+  const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const topicById = new Map(data.topics.map((topic) => [topic._id, topic]));
+  const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
+  const questionById = new Map(data.questions.map((question) => [question._id, question]));
+
+  return data.responses
+    .map((response) => {
+      const participant = participantById.get(response.participantId);
+      const group = participant ? groupById.get(participant.groupId) : null;
+      const essay = essayById.get(response.essayId);
+      const topic = essay ? topicById.get(essay.topicId) : null;
+      const feedback = feedbackById.get(response.feedbackId);
+      const question = questionById.get(response.questionId);
+      if (!participant || !essay || !feedback || !question) return null;
+      return {
+        responseId: response._id,
+        value: response.value,
+        updatedAt: response.updatedAt,
+        participantId: participant._id,
+        participantPseudonym: participant.pseudonym,
+        participantCode: participant.code,
+        participantStatus: participant.status,
+        groupKey: group?.key || "",
+        topicKey: topic?.key || "",
+        topicTitle: topic?.title || "",
+        essayId: essay._id,
+        essayKey: essay.key,
+        essayTitle: essay.title,
+        feedbackId: feedback._id,
+        methodKey: feedback.methodKey,
+        questionId: question._id,
+        questionKey: question.key,
+        questionText: question.text,
+        questionOrder: question.order,
+        questionLabels: question.labels
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        a.participantCode.localeCompare(b.participantCode) ||
+        a.essayKey.localeCompare(b.essayKey) ||
+        a.methodKey.localeCompare(b.methodKey) ||
+        a.questionOrder - b.questionOrder
+    );
 }
 
 function methodComparisons(data) {
@@ -791,6 +1181,7 @@ export const dashboard = query({
       topics: await resolveTopicPromptImages(ctx, data.topics),
       essays: data.essays,
       feedbacks: data.feedbacks,
+      automaticRankings: data.automaticRankings,
       questions: data.questions,
       assignments: data.assignments,
       responseCount: data.responses.length,
@@ -802,7 +1193,8 @@ export const dashboard = query({
       validationErrors,
       agreement: alpha,
       resultsAnalytics: analytics,
-      methodComparisons: analytics.methodComparisons
+      methodComparisons: analytics.methodComparisons,
+      editableResponses: editableResponseRows(data)
     };
   }
 });
@@ -930,6 +1322,105 @@ export const importMaterials = mutation({
     }
 
     return { ok: true };
+  }
+});
+
+export const importAutomaticRankings = mutation({
+  args: {
+    adminPassword: v.string(),
+    rows: v.array(
+      v.object({
+        surveyMethodKey: v.optional(v.string()),
+        autoApproachKey: v.string(),
+        displayName: v.string(),
+        isCurrentManualAnnotationMethod: v.boolean(),
+        materialFeedbackRows: v.optional(v.number()),
+        combinedRank: v.number(),
+        combinedAbility: v.number(),
+        combinedScore: v.number(),
+        combinedWins: v.number(),
+        combinedLosses: v.number(),
+        combinedTies: v.number(),
+        combinedComparisons: v.number(),
+        gemmaRank: v.optional(v.number()),
+        gemmaAbility: v.optional(v.number()),
+        gemmaScore: v.optional(v.number()),
+        gemmaWins: v.optional(v.number()),
+        gemmaLosses: v.optional(v.number()),
+        gemmaTies: v.optional(v.number()),
+        gemmaComparisons: v.optional(v.number()),
+        llamaRank: v.optional(v.number()),
+        llamaAbility: v.optional(v.number()),
+        llamaScore: v.optional(v.number()),
+        llamaWins: v.optional(v.number()),
+        llamaLosses: v.optional(v.number()),
+        llamaTies: v.optional(v.number()),
+        llamaComparisons: v.optional(v.number()),
+        openaiRank: v.optional(v.number()),
+        openaiAbility: v.optional(v.number()),
+        openaiScore: v.optional(v.number()),
+        openaiWins: v.optional(v.number()),
+        openaiLosses: v.optional(v.number()),
+        openaiTies: v.optional(v.number()),
+        openaiComparisons: v.optional(v.number()),
+        rankingGeneratedAt: v.optional(v.string()),
+        rankingDescription: v.optional(v.string()),
+        rankingSourceModels: v.optional(v.string())
+      })
+    )
+  },
+  handler: async (ctx, args) => {
+    requireAdmin(args.adminPassword);
+    if (args.rows.length === 0) {
+      throw new Error("Die automatische Ranking-CSV enthält keine importierbaren Zeilen.");
+    }
+
+    const autoApproachKeys = new Set();
+    const surveyMethodKeys = new Set();
+    for (const row of args.rows) {
+      const autoApproachKey = row.autoApproachKey.trim();
+      const surveyMethodKey = row.surveyMethodKey?.trim() || "";
+      if (!autoApproachKey) {
+        throw new Error("Jede automatische Ranking-Zeile benötigt autoApproachKey.");
+      }
+      if (autoApproachKeys.has(autoApproachKey)) {
+        throw new Error(`Doppelter autoApproachKey in automatischen Rankings: ${autoApproachKey}`);
+      }
+      autoApproachKeys.add(autoApproachKey);
+      if (surveyMethodKey) {
+        if (surveyMethodKeys.has(surveyMethodKey)) {
+          throw new Error(`Doppelter surveyMethodKey in automatischen Rankings: ${surveyMethodKey}`);
+        }
+        surveyMethodKeys.add(surveyMethodKey);
+      }
+    }
+
+    await clearTables(ctx, ["automaticMethodRankings"]);
+    const importedAt = now();
+    for (const row of args.rows) {
+      const surveyMethodKey = row.surveyMethodKey?.trim() || undefined;
+      await ctx.db.insert("automaticMethodRankings", {
+        ...row,
+        surveyMethodKey,
+        autoApproachKey: row.autoApproachKey.trim(),
+        displayName: row.displayName.trim() || row.autoApproachKey.trim(),
+        rankingGeneratedAt: row.rankingGeneratedAt?.trim() || undefined,
+        rankingDescription: row.rankingDescription?.trim() || undefined,
+        rankingSourceModels: row.rankingSourceModels?.trim() || undefined,
+        importedAt
+      });
+    }
+
+    const feedbackMethodKeys = [...new Set((await collect(ctx, "feedbacks")).map((feedback) => feedback.methodKey))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return {
+      ok: true,
+      importedRows: args.rows.length,
+      mappedSurveyMethods: surveyMethodKeys.size,
+      unmappedAutomaticApproaches: args.rows.length - surveyMethodKeys.size,
+      missingSurveyMethodKeys: feedbackMethodKeys.filter((methodKey) => !surveyMethodKeys.has(methodKey))
+    };
   }
 });
 
@@ -1096,6 +1587,38 @@ export const reopenParticipant = mutation({
       completedAt: undefined,
       updatedAt: now()
     });
+    return { ok: true };
+  }
+});
+
+export const updateResponse = mutation({
+  args: {
+    adminPassword: v.string(),
+    responseId: v.id("responses"),
+    value: v.number()
+  },
+  handler: async (ctx, args) => {
+    requireAdmin(args.adminPassword);
+    if (!Number.isInteger(args.value) || args.value < 1 || args.value > 7) {
+      throw new Error("Bewertungen müssen ganzzahlig zwischen 1 und 7 sein.");
+    }
+
+    const response = await ctx.db.get(args.responseId);
+    if (!response) {
+      throw new Error("Bewertung wurde nicht gefunden.");
+    }
+
+    const participant = await ctx.db.get(response.participantId);
+    const essay = await ctx.db.get(response.essayId);
+    const feedback = await ctx.db.get(response.feedbackId);
+    const question = await ctx.db.get(response.questionId);
+    if (!participant || !essay || !feedback || !question || feedback.essayId !== response.essayId) {
+      throw new Error("Bewertungskontext wurde nicht vollständig gefunden.");
+    }
+
+    const updatedAt = now();
+    await ctx.db.patch(response._id, { value: args.value, updatedAt });
+    await ctx.db.patch(participant._id, { updatedAt });
     return { ok: true };
   }
 });

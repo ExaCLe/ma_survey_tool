@@ -91,6 +91,35 @@ Eine automatisch aus dem benachbarten Thesis-Code-Repository erzeugte Beispielda
 
 Die Datei enthält 6 Essays pro Thema, also nach der App-Randomisierung 3 Essays pro Gruppe.
 
+## Importformat automatische Rankings
+
+Im Adminbereich unter `Import` kannst du zusätzlich die automatisch erzeugte Helpfulness-Ranking-CSV importieren. Dieser Import ersetzt nur die gespeicherten automatischen Rankings; Materialien, Teilnehmende und Antworten bleiben unverändert.
+
+Erwartete Datei:
+
+```text
+../ma_thesis_code/results/manual_annotation_study/automatic_helpfulness_rankings_for_survey.csv
+```
+
+Pflichtspalten:
+
+- `autoApproachKey`
+- `combined_rank`, `combined_ability`, `combined_score`
+- `combined_wins`, `combined_losses`, `combined_ties`, `combined_comparisons`
+
+Optionale Mapping- und Metadatenspalten:
+
+- `surveyMethodKey`
+- `displayName`
+- `isCurrentManualAnnotationMethod`
+- `materialFeedbackRows`
+- Judge-Metriken mit den Präfixen `gemma_`, `llama_`, `openai_`
+- `rankingGeneratedAt`, `rankingDescription`, `rankingSourceModels`
+
+Zeilen mit `surveyMethodKey` werden in `Ergebnisse` gegen die Human-Ratings gematcht. Zeilen ohne `surveyMethodKey` bleiben als zusätzliche automatische Ansätze gespeichert und werden in der Importvorschau gezählt.
+
+Unter `Ergebnisse` -> `Bradley-Terry Rankingvergleich` wird für die Human-Ratings ein explizites Ranking berechnet: pro Annotator:in und Essay werden alle Likert-Kriterien zu einem Overall-Score gemittelt, daraus werden paarweise Siege/Ties zwischen Methoden gebildet, und daraus werden Bradley-Terry-Ability-Werte geschätzt. Zusätzlich gibt es eine Essay-Ansicht mit aggregiertem Essay-Ranking und den individuellen Annotator:innen-Rankings pro Essay. Die aktuell importierte Automatic-Ranking-CSV enthält nur Overall-Methodenränge; diese Overall-Automatikränge werden deshalb als Vergleichsspalten neben Overall-, Essay- und Annotator:innen-Rankings angezeigt.
+
 ## Beispieldateien neu erzeugen
 
 Das Skript [scripts/prepare_survey_imports.py](scripts/prepare_survey_imports.py) liest standardmäßig `../ma_thesis_code/results/llm_pipeline/catalog.sqlite` und schreibt die beiden CSV-Dateien nach `sample_data/`.
@@ -119,7 +148,8 @@ python3 scripts/prepare_survey_imports.py --catalog ../ma_thesis_code/results/ll
 4. Validierungsfehler beheben.
 5. Studie in `Einstellungen` aktivieren.
 6. In `Links` persönliche Links kopieren oder als CSV exportieren.
-7. In `Ergebnisse` Fortschritt, Mittelwerte, Alpha und Antwort-CSV abrufen.
+7. Optional automatische Rankings importieren.
+8. In `Ergebnisse` Fortschritt, Mittelwerte, Alpha, Antwort-CSV und den Vergleich `Automatik vs. Human` abrufen.
 
 Teilnehmende sehen pro Essay zuerst einen Leseschritt mit eingeklapptem Schreibauftrag und sichtbarem Essay. Danach bewerten sie die drei Feedbacktexte; Schreibauftrag und Essay bleiben dabei oben eingeklappt verfügbar. Antworten speichern automatisch. Der Abschluss ist nur möglich, wenn Alter, Deutschkenntnisse und alle Ratings vollständig sind.
 

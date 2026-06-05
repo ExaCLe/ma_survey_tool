@@ -17,8 +17,10 @@ import {
   Lock,
   LogOut,
   MessageSquareText,
+  PencilLine,
   RefreshCcw,
   Rows3,
+  Search,
   Settings,
   ShieldCheck,
   X,
@@ -35,6 +37,7 @@ const nav = [
   ["materials", "Material", FileText],
   ["links", "Links", Link2],
   ["results", "Ergebnisse", BarChart3],
+  ["corrections", "Korrektur", PencilLine],
   ["settings", "Einstellungen", Settings]
 ];
 
@@ -59,12 +62,25 @@ function formatSignedDelta(value) {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 }
 
+function formatSignedInteger(value) {
+  if (!Number.isFinite(value)) return "–";
+  return `${value > 0 ? "+" : ""}${value}`;
+}
+
 function formatStat(value, digits = 2) {
   return Number.isFinite(value) ? value.toFixed(digits) : "–";
 }
 
 function formatPercent(value) {
   return Number.isFinite(value) ? `${Math.round(value)}%` : "–";
+}
+
+function formatDateTime(value) {
+  if (!Number.isFinite(value)) return "–";
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function scorePercent(value) {
@@ -81,6 +97,89 @@ function parseCsv(text) {
   return Papa.parse(text, { header: true, skipEmptyLines: true, transformHeader: (header) => header.trim() }).data;
 }
 
+function optionalNumber(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`"${raw}" ist keine gültige Zahl.`);
+  }
+  return parsed;
+}
+
+function requiredNumber(row, key) {
+  const value = optionalNumber(row[key]);
+  if (!Number.isFinite(value)) {
+    throw new Error(`Spalte ${key} benötigt eine Zahl.`);
+  }
+  return value;
+}
+
+function optionalString(value) {
+  const text = String(value ?? "").trim();
+  return text || undefined;
+}
+
+function isTruthyCsvFlag(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "ja";
+}
+
+const automaticMetricFields = [
+  ["combined_rank", "combinedRank", true],
+  ["combined_ability", "combinedAbility", true],
+  ["combined_score", "combinedScore", true],
+  ["combined_wins", "combinedWins", true],
+  ["combined_losses", "combinedLosses", true],
+  ["combined_ties", "combinedTies", true],
+  ["combined_comparisons", "combinedComparisons", true],
+  ["gemma_rank", "gemmaRank"],
+  ["gemma_ability", "gemmaAbility"],
+  ["gemma_score", "gemmaScore"],
+  ["gemma_wins", "gemmaWins"],
+  ["gemma_losses", "gemmaLosses"],
+  ["gemma_ties", "gemmaTies"],
+  ["gemma_comparisons", "gemmaComparisons"],
+  ["llama_rank", "llamaRank"],
+  ["llama_ability", "llamaAbility"],
+  ["llama_score", "llamaScore"],
+  ["llama_wins", "llamaWins"],
+  ["llama_losses", "llamaLosses"],
+  ["llama_ties", "llamaTies"],
+  ["llama_comparisons", "llamaComparisons"],
+  ["openai_rank", "openaiRank"],
+  ["openai_ability", "openaiAbility"],
+  ["openai_score", "openaiScore"],
+  ["openai_wins", "openaiWins"],
+  ["openai_losses", "openaiLosses"],
+  ["openai_ties", "openaiTies"],
+  ["openai_comparisons", "openaiComparisons"]
+];
+
+function parseAutomaticRankingRows(csv) {
+  return parseCsv(csv)
+    .map((row) => {
+      const autoApproachKey = String(row.autoApproachKey || "").trim();
+      if (!autoApproachKey) return null;
+      const parsed = {
+        surveyMethodKey: optionalString(row.surveyMethodKey),
+        autoApproachKey,
+        displayName: String(row.displayName || row.autoApproachKey || "").trim(),
+        isCurrentManualAnnotationMethod: isTruthyCsvFlag(row.isCurrentManualAnnotationMethod),
+        materialFeedbackRows: optionalNumber(row.materialFeedbackRows),
+        rankingGeneratedAt: optionalString(row.rankingGeneratedAt),
+        rankingDescription: optionalString(row.rankingDescription),
+        rankingSourceModels: optionalString(row.rankingSourceModels)
+      };
+      for (const [csvKey, fieldKey, required] of automaticMetricFields) {
+        const value = required ? requiredNumber(row, csvKey) : optionalNumber(row[csvKey]);
+        if (Number.isFinite(value)) parsed[fieldKey] = value;
+      }
+      return Object.fromEntries(Object.entries(parsed).filter(([, value]) => value !== undefined));
+    })
+    .filter(Boolean);
+}
+
 function downloadFile(name, content, type = "text/csv;charset=utf-8") {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -89,6 +188,10 @@ function downloadFile(name, content, type = "text/csv;charset=utf-8") {
   anchor.download = name;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function csvLine(values) {
+  return values.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",");
 }
 
 function promptImageSrc(value) {
@@ -397,10 +500,28 @@ function Overview({ password, data, actions, setSection }) {
   );
 }
 
-function ImportSection({ password, actions }) {
+function ImportSection({ password, data, actions }) {
   const [participantCsv, setParticipantCsv] = useState("groupKey,firstName\nA,Anna\nA,Ben\nA,Cem\nB,Dana\nB,Emil\nB,Finn");
   const [materialCsv, setMaterialCsv] = useState("topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText\nargumentation,Argumentation,\"Schreibe einen argumentativen Essay.\",,essay-01,Essay 1,9,\"Essaytext...\",method-a,\"Feedbacktext...\"");
+  const [automaticCsv, setAutomaticCsv] = useState("surveyMethodKey,autoApproachKey,displayName,isCurrentManualAnnotationMethod,materialFeedbackRows,combined_rank,combined_ability,combined_score,combined_wins,combined_losses,combined_ties,combined_comparisons,gemma_rank,gemma_ability,gemma_score,gemma_wins,gemma_losses,gemma_ties,gemma_comparisons,llama_rank,llama_ability,llama_score,llama_wins,llama_losses,llama_ties,llama_comparisons,openai_rank,openai_ability,openai_score,openai_wins,openai_losses,openai_ties,openai_comparisons,rankingGeneratedAt,rankingDescription,rankingSourceModels\nllama_single_issue_v1,single_issue_v1_v3,Llama Single Issue v1,1,36,5,0.0916,-2.3905,4464,2134,96,6598,5,0.0913,-2.3932,1562,644,28,2206,1,0.1583,-1.8435,1757,451,8,2208,6,0.0551,-2.8986,1145,1039,60,2184,2026-06-05T08:25:54,\"Final helpfulness ranking\",\"gemma,llama,openai\"");
   const [message, setMessage] = useState("");
+  const automaticPreview = useMemo(() => {
+    try {
+      const rows = parseAutomaticRankingRows(automaticCsv);
+      const mappedRows = rows.filter((row) => row.surveyMethodKey);
+      const currentMethodKeys = [...new Set((data?.feedbacks || []).map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+      const mappedKeys = new Set(mappedRows.map((row) => row.surveyMethodKey));
+      return {
+        rows,
+        mappedRows,
+        unmappedRows: rows.filter((row) => !row.surveyMethodKey),
+        missingMethodKeys: currentMethodKeys.filter((methodKey) => !mappedKeys.has(methodKey)),
+        error: ""
+      };
+    } catch (error) {
+      return { rows: [], mappedRows: [], unmappedRows: [], missingMethodKeys: [], error: error?.message || "CSV konnte nicht gelesen werden." };
+    }
+  }, [automaticCsv, data?.feedbacks]);
 
   async function importParticipants() {
     const rows = parseCsv(participantCsv);
@@ -434,6 +555,20 @@ function ImportSection({ password, actions }) {
     }));
     await actions.importMaterials({ adminPassword: password, rows });
     setMessage("Materialien wurden importiert.");
+  }
+
+  async function importAutomaticRankings() {
+    if (automaticPreview.error) {
+      throw new Error(automaticPreview.error);
+    }
+    const result = await actions.importAutomaticRankings({
+      adminPassword: password,
+      rows: automaticPreview.rows
+    });
+    const missing = result.missingSurveyMethodKeys?.length ? ` Fehlende Material-Methoden: ${result.missingSurveyMethodKeys.join(", ")}.` : "";
+    setMessage(
+      `Automatische Rankings wurden importiert: ${result.importedRows} Zeilen, ${result.mappedSurveyMethods} gemappte Survey-Methoden.${missing}`
+    );
   }
 
   return (
@@ -482,6 +617,55 @@ function ImportSection({ password, actions }) {
           </button>
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">
+            <BarChart3 size={19} /> Automatische Rankings importieren
+          </h2>
+          <span className="tag">{data?.automaticRankings?.length || 0} gespeichert</span>
+        </div>
+        <p className="muted">Importiert die Helpfulness-Rankings aus der erzeugten Automatic-Ranking-CSV. Materialien und Antworten bleiben unverändert.</p>
+        <div className="notice">
+          Pflichtspalten: <strong>autoApproachKey</strong>, <strong>combined_rank</strong>, <strong>combined_ability</strong>, <strong>combined_score</strong>, <strong>combined_wins</strong>, <strong>combined_losses</strong>, <strong>combined_ties</strong>, <strong>combined_comparisons</strong>. Optional zur Zuordnung: <strong>surveyMethodKey</strong>.
+        </div>
+        <CsvDropZone
+          label="Automatic-Ranking-CSV hier ablegen oder auswählen"
+          description="Zeilen mit surveyMethodKey werden in Ergebnisse gegen die Human-Ratings gematcht."
+          onLoad={setAutomaticCsv}
+        />
+        <textarea className="textarea" style={{ marginTop: 14, minHeight: 220 }} value={automaticCsv} onChange={(event) => setAutomaticCsv(event.target.value)} />
+        {automaticPreview.error ? (
+          <div className="notice error" style={{ marginTop: 12 }}>{automaticPreview.error}</div>
+        ) : (
+          <div className="automatic-preview-grid" style={{ marginTop: 12 }}>
+            <div className="notice">
+              <strong>{automaticPreview.rows.length}</strong>
+              <span> Ranking-Zeilen</span>
+            </div>
+            <div className="notice success">
+              <strong>{automaticPreview.mappedRows.length}</strong>
+              <span> gemappte Survey-Methoden</span>
+            </div>
+            <div className="notice">
+              <strong>{automaticPreview.unmappedRows.length}</strong>
+              <span> weitere automatische Ansätze</span>
+            </div>
+            <div className={`notice ${automaticPreview.missingMethodKeys.length ? "error" : "success"}`}>
+              <strong>{automaticPreview.missingMethodKeys.length}</strong>
+              <span> Material-Methoden ohne Mapping</span>
+            </div>
+          </div>
+        )}
+        {automaticPreview.missingMethodKeys.length > 0 && (
+          <p className="small muted" style={{ marginTop: 10 }}>
+            Ohne Mapping: {automaticPreview.missingMethodKeys.join(", ")}
+          </p>
+        )}
+        <button className="btn btn-primary" type="button" style={{ marginTop: 12 }} disabled={Boolean(automaticPreview.error) || automaticPreview.rows.length === 0} onClick={importAutomaticRankings}>
+          <Upload size={16} /> Automatische Rankings importieren
+        </button>
+      </section>
     </div>
   );
 }
@@ -734,11 +918,145 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
   const essayMethodStats = analytics.essayMethodStats || [];
   const ratingDistributions = analytics.ratingDistributions || [];
   const methodComparisons = analytics.methodComparisons || data.methodComparisons || [];
+  const automaticComparison = analytics.automaticRankingComparison || {};
+  const automaticRows = automaticComparison.rows || [];
+  const humanRankingComparison = analytics.humanRankingComparison || {};
+  const humanOverallRows = humanRankingComparison.overallRows || [];
+  const humanEssayRows = humanRankingComparison.essayRows || [];
   const methodKeys = methodStats.map((row) => row.methodKey);
   const methodQuestionByKey = new Map(methodQuestionStats.map((row) => [`${row.questionKey}:${row.methodKey}`, row]));
   const essayKeys = [...new Set(essayMethodStats.map((row) => row.essayKey))];
   const essayMethodByKey = new Map(essayMethodStats.map((row) => [`${row.essayKey}:${row.methodKey}`, row]));
   const maxDistributionCount = Math.max(1, ...ratingDistributions.flatMap((row) => row.counts.map((item) => item.count)));
+  const automaticComparisonCsv = [
+    csvLine([
+      "methodKey",
+      "displayName",
+      "humanMean",
+      "humanRank",
+      "humanCount",
+      "autoApproachKey",
+      "automaticCombinedRank",
+      "automaticCombinedAbility",
+      "automaticCombinedScore",
+      "rankDelta",
+      "gemmaRank",
+      "llamaRank",
+      "openaiRank"
+    ]),
+    ...automaticRows.map((row) =>
+      csvLine([
+        row.methodKey,
+        row.displayName,
+        row.humanMean,
+        row.humanRank,
+        row.humanCount,
+        row.autoApproachKey,
+        row.automaticCombinedRank,
+        row.automaticCombinedAbility,
+        row.automaticCombinedScore,
+        row.rankDelta,
+        row.gemmaRank,
+        row.llamaRank,
+        row.openaiRank
+      ])
+    )
+  ].join("\n");
+  const humanOverallRankingCsv = [
+    csvLine([
+      "methodKey",
+      "humanBtRank",
+      "humanBtAbility",
+      "humanBtScore",
+      "humanMean",
+      "humanComparisons",
+      "humanWins",
+      "humanLosses",
+      "humanTies",
+      "automaticSurveyRank",
+      "automaticCombinedRank",
+      "automaticCombinedAbility",
+      "automaticCombinedScore",
+      "rankDelta"
+    ]),
+    ...humanOverallRows.map((row) =>
+      csvLine([
+        row.methodKey,
+        row.btRank,
+        row.btAbility,
+        row.btScore,
+        row.mean,
+        row.comparisons,
+        row.wins,
+        row.losses,
+        row.ties,
+        row.automaticSurveyRank,
+        row.automaticCombinedRank,
+        row.automaticCombinedAbility,
+        row.automaticCombinedScore,
+        row.rankDelta
+      ])
+    )
+  ].join("\n");
+  const humanEssayRankingCsv = [
+    csvLine([
+      "essayKey",
+      "essayTitle",
+      "topicKey",
+      "scope",
+      "participantCode",
+      "participantPseudonym",
+      "methodKey",
+      "humanRank",
+      "humanMean",
+      "humanBtAbility",
+      "humanComparisons",
+      "automaticSurveyRank",
+      "automaticCombinedRank",
+      "automaticCombinedAbility",
+      "rankDelta"
+    ]),
+    ...humanEssayRows.flatMap((essay) => [
+      ...essay.methodRows.map((row) =>
+        csvLine([
+          essay.essayKey,
+          essay.essayTitle,
+          essay.topicKey,
+          "essay_aggregate",
+          "",
+          "",
+          row.methodKey,
+          row.btRank,
+          row.mean,
+          row.btAbility,
+          row.comparisons,
+          row.automaticSurveyRank,
+          row.automaticCombinedRank,
+          row.automaticCombinedAbility,
+          row.rankDelta
+        ])
+      ),
+      ...essay.annotatorRows.map((row) =>
+        csvLine([
+          essay.essayKey,
+          essay.essayTitle,
+          essay.topicKey,
+          "annotator",
+          row.participantCode,
+          row.participantPseudonym,
+          row.methodKey,
+          row.humanRank,
+          row.mean,
+          "",
+          "",
+          row.automaticSurveyRank,
+          row.automaticCombinedRank,
+          row.automaticCombinedAbility,
+          ""
+        ])
+      )
+    ])
+  ].join("\n");
 
   return (
     <div className="content-grid">
@@ -803,6 +1121,211 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
           </div>
         ) : (
           <div className="empty-state">Noch keine gespeicherten Ratings vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Bradley-Terry Rankingvergleich</h2>
+          <div className="button-row">
+            <span className="tag">ρ {formatStat(humanRankingComparison.spearman)}</span>
+            <button className="btn btn-secondary" type="button" onClick={() => downloadFile("human-automatic-bt-overall.csv", humanOverallRankingCsv)} disabled={!humanOverallRows.length}>
+              <Download size={16} /> Overall exportieren
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={() => downloadFile("human-automatic-bt-by-essay.csv", humanEssayRankingCsv)} disabled={!humanEssayRows.length}>
+              <Download size={16} /> Essays exportieren
+            </button>
+          </div>
+        </div>
+        <p className="muted">
+          Human-Ranking: pro Annotator:in und Essay werden alle Kriterien zu einem Overall-Score gemittelt; daraus entstehen paarweise Siege/Ties und Bradley-Terry-Ability-Werte. Automatik: importierte Overall-Ränge aus der Automatic-Ranking-CSV.
+        </p>
+        {humanRankingComparison.note && <div className="notice" style={{ marginBottom: 14 }}>{humanRankingComparison.note}</div>}
+        {humanOverallRows.length ? (
+          <div className="table-wrap">
+            <table className="table ranking-comparison-table">
+              <thead>
+                <tr>
+                  <th>Methode</th>
+                  <th className="numeric">Human BT Rang</th>
+                  <th className="numeric">Human Ability</th>
+                  <th className="numeric">Human Ø</th>
+                  <th className="numeric">Bilanz</th>
+                  <th className="numeric">Auto Survey Rang</th>
+                  <th className="numeric">Auto Global Rang</th>
+                  <th className="numeric">Auto Ability</th>
+                  <th className="numeric">Δ Rang</th>
+                </tr>
+              </thead>
+              <tbody>
+                {humanOverallRows.map((row) => (
+                  <tr key={row.methodKey}>
+                    <td>
+                      <strong>{row.methodKey}</strong>
+                      <div className="muted small">{row.autoApproachKey || "kein Auto-Mapping"}</div>
+                    </td>
+                    <td className="numeric">{row.btRank || "–"}</td>
+                    <td className="numeric">{formatStat(row.btAbility, 3)}</td>
+                    <td className="numeric">{formatStat(row.mean)}</td>
+                    <td className="numeric">{row.wins} / {row.ties} / {row.losses}</td>
+                    <td className="numeric">{row.automaticSurveyRank || "–"}</td>
+                    <td className="numeric">{row.automaticCombinedRank || "–"}</td>
+                    <td className="numeric">{formatStat(row.automaticCombinedAbility, 3)}</td>
+                    <td className="numeric">{formatSignedInteger(row.rankDelta)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine vollständigen Human-Rankings vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Ranking je Essay</h2>
+          <span className="tag">{humanEssayRows.length} Essays</span>
+        </div>
+        {humanEssayRows.length ? (
+          <div className="essay-ranking-list">
+            {humanEssayRows.map((essay) => (
+              <details className="essay-ranking-item" key={essay.essayKey}>
+                <summary>
+                  <span>
+                    <strong>{essay.essayKey}</strong>
+                    <span className="muted small"> {essay.topicKey || essay.essayTitle}</span>
+                  </span>
+                  <span className="tag">{essay.annotatorRows.length ? `${new Set(essay.annotatorRows.map((row) => row.participantCode)).size} Annotator:innen` : "keine Ratings"}</span>
+                </summary>
+                <div className="essay-ranking-content">
+                  <div className="table-wrap">
+                    <table className="table ranking-comparison-table">
+                      <thead>
+                        <tr>
+                          <th>Methode</th>
+                          <th className="numeric">Essay BT Rang</th>
+                          <th className="numeric">Essay Ability</th>
+                          <th className="numeric">Human Ø</th>
+                          <th className="numeric">Bilanz</th>
+                          <th className="numeric">Auto Survey Rang</th>
+                          <th className="numeric">Auto Ability</th>
+                          <th className="numeric">Δ Rang</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {essay.methodRows.map((row) => (
+                          <tr key={`${essay.essayKey}-${row.methodKey}`}>
+                            <td><strong>{row.methodKey}</strong></td>
+                            <td className="numeric">{row.btRank || "–"}</td>
+                            <td className="numeric">{formatStat(row.btAbility, 3)}</td>
+                            <td className="numeric">{formatStat(row.mean)}</td>
+                            <td className="numeric">{row.wins} / {row.ties} / {row.losses}</td>
+                            <td className="numeric">{row.automaticSurveyRank || "–"}</td>
+                            <td className="numeric">{formatStat(row.automaticCombinedAbility, 3)}</td>
+                            <td className="numeric">{formatSignedInteger(row.rankDelta)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="table-wrap" style={{ marginTop: 14 }}>
+                    <table className="table annotator-ranking-table">
+                      <thead>
+                        <tr>
+                          <th>Annotator:in</th>
+                          <th>Methode</th>
+                          <th className="numeric">Indiv. Rang</th>
+                          <th className="numeric">Overall Ø</th>
+                          <th className="numeric">Auto Survey Rang</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {essay.annotatorRows.map((row) => (
+                          <tr key={`${essay.essayKey}-${row.participantCode}-${row.methodKey}`}>
+                            <td>
+                              <strong>{row.participantPseudonym}</strong>
+                              <div className="muted small">{row.participantCode}</div>
+                            </td>
+                            <td>{row.methodKey}</td>
+                            <td className="numeric">{row.humanRank}</td>
+                            <td className="numeric">{formatStat(row.mean)}</td>
+                            <td className="numeric">{row.automaticSurveyRank || "–"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">Noch keine Essay-Rankings vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Automatik vs. Human</h2>
+          <div className="button-row">
+            <span className="tag">ρ {formatStat(automaticComparison.spearman)}</span>
+            <button className="btn btn-secondary" type="button" onClick={() => downloadFile("automatic-human-comparison.csv", automaticComparisonCsv)} disabled={!automaticRows.length}>
+              <Download size={16} /> Vergleich exportieren
+            </button>
+          </div>
+        </div>
+        {automaticRows.length ? (
+          <>
+            <div className="automatic-summary">
+              <span>{automaticComparison.mappedCount || 0} gemappte Survey-Methoden</span>
+              <span>{automaticComparison.totalAutomaticRows || 0} automatische Ranking-Zeilen</span>
+              <span>{automaticComparison.unmappedAutomaticApproaches?.length || 0} nicht gemappte Ansätze</span>
+            </div>
+            {automaticComparison.missingSurveyMethodKeys?.length > 0 && (
+              <div className="notice error" style={{ marginBottom: 14 }}>
+                Ohne automatisches Ranking: {automaticComparison.missingSurveyMethodKeys.join(", ")}
+              </div>
+            )}
+            <div className="table-wrap">
+              <table className="table automatic-comparison-table">
+                <thead>
+                  <tr>
+                    <th>Methode</th>
+                    <th className="numeric">Human Ø</th>
+                    <th className="numeric">Human Rang</th>
+                    <th className="numeric">Auto Rang</th>
+                    <th className="numeric">Δ Rang</th>
+                    <th className="numeric">Auto Ability</th>
+                    <th className="numeric">Gemma</th>
+                    <th className="numeric">Llama</th>
+                    <th className="numeric">OpenAI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {automaticRows.map((row) => (
+                    <tr key={row.methodKey}>
+                      <td>
+                        <strong>{row.methodKey}</strong>
+                        <div className="muted small">{row.autoApproachKey || "kein Mapping"}</div>
+                      </td>
+                      <td className="numeric">{formatStat(row.humanMean)}</td>
+                      <td className="numeric">{row.humanRank || "–"}</td>
+                      <td className="numeric">{row.automaticCombinedRank || "–"}</td>
+                      <td className="numeric">{formatSignedInteger(row.rankDelta)}</td>
+                      <td className="numeric">{formatStat(row.automaticCombinedAbility, 3)}</td>
+                      <td className="numeric">{row.gemmaRank || "–"}</td>
+                      <td className="numeric">{row.llamaRank || "–"}</td>
+                      <td className="numeric">{row.openaiRank || "–"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">Noch keine automatischen Rankings importiert oder noch keine Human-Ratings vorhanden.</div>
         )}
       </section>
 
@@ -1018,6 +1541,163 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
   );
 }
 
+function CorrectionSection({ password, data, updateResponse }) {
+  const [participantFilter, setParticipantFilter] = useState("all");
+  const [questionFilter, setQuestionFilter] = useState("all");
+  const [methodFilter, setMethodFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [pendingResponse, setPendingResponse] = useState("");
+  const [pendingValue, setPendingValue] = useState(null);
+  const [message, setMessage] = useState("");
+  const rows = data.editableResponses || [];
+  const participantOptions = data.participants
+    .filter((participant) => rows.some((row) => row.participantId === participant._id))
+    .sort((a, b) => a.code.localeCompare(b.code));
+  const questionOptions = [...new Map(rows.map((row) => [row.questionId, row])).values()].sort((a, b) => a.questionOrder - b.questionOrder);
+  const methodOptions = [...new Set(rows.map((row) => row.methodKey))].sort((a, b) => a.localeCompare(b));
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredRows = rows.filter((row) => {
+    if (participantFilter !== "all" && row.participantId !== participantFilter) return false;
+    if (questionFilter !== "all" && row.questionId !== questionFilter) return false;
+    if (methodFilter !== "all" && row.methodKey !== methodFilter) return false;
+    if (!normalizedSearch) return true;
+    return [row.participantPseudonym, row.participantCode, row.groupKey, row.topicTitle, row.essayKey, row.essayTitle, row.methodKey, row.questionKey]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedSearch);
+  });
+
+  async function setValue(row, value) {
+    if (row.value === value || pendingResponse) return;
+    setMessage("");
+    setPendingResponse(row.responseId);
+    setPendingValue(value);
+    try {
+      await updateResponse({ adminPassword: password, responseId: row.responseId, value });
+      setMessage(`Bewertung für ${row.participantCode} wurde auf ${value} gesetzt.`);
+    } finally {
+      setPendingResponse("");
+      setPendingValue(null);
+    }
+  }
+
+  return (
+    <div className="content-grid">
+      {message && <div className="notice success">{message}</div>}
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">
+            <PencilLine size={19} /> Bewertungen korrigieren
+          </h2>
+          <span className="tag">{filteredRows.length} / {rows.length} Ratings</span>
+        </div>
+        <p className="muted">
+          Änderungen werden direkt in den gespeicherten Antworten übernommen und danach in Export und Auswertung neu berechnet.
+        </p>
+        <div className="result-filter-grid">
+          <label className="field-label">
+            Teilnehmer:in
+            <select className="select" value={participantFilter} onChange={(event) => setParticipantFilter(event.target.value)}>
+              <option value="all">Alle</option>
+              {participantOptions.map((participant) => (
+                <option key={participant._id} value={participant._id}>
+                  {participant.code} · {participant.pseudonym}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-label">
+            Kriterium
+            <select className="select" value={questionFilter} onChange={(event) => setQuestionFilter(event.target.value)}>
+              <option value="all">Alle</option>
+              {questionOptions.map((question) => (
+                <option key={question.questionId} value={question.questionId}>{question.questionKey}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field-label">
+            Methode
+            <select className="select" value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)}>
+              <option value="all">Alle</option>
+              {methodOptions.map((methodKey) => (
+                <option key={methodKey} value={methodKey}>{methodKey}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field-label">
+            Suche
+            <span className="search-field">
+              <Search size={16} />
+              <input className="field" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Code, Essay, Thema…" />
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section className="panel">
+        {filteredRows.length ? (
+          <div className="table-wrap">
+            <table className="table editable-results-table">
+              <thead>
+                <tr>
+                  <th>Teilnehmer:in</th>
+                  <th>Essay</th>
+                  <th>Methode</th>
+                  <th>Kriterium</th>
+                  <th>Wert</th>
+                  <th>Aktualisiert</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <tr key={row.responseId}>
+                    <td>
+                      <strong>{row.participantPseudonym}</strong>
+                      <div className="muted small">
+                        {row.participantCode}{row.groupKey ? ` · Gruppe ${row.groupKey}` : ""} · {row.participantStatus}
+                      </div>
+                    </td>
+                    <td>
+                      <strong>{row.essayKey}</strong>
+                      <div className="muted small">{row.topicTitle || row.essayTitle}</div>
+                    </td>
+                    <td>
+                      <span className="tag">{row.methodKey}</span>
+                    </td>
+                    <td>
+                      <strong>{row.questionKey}</strong>
+                      <div className="muted small">{row.questionText}</div>
+                    </td>
+                    <td>
+                      <div className="rating-edit-control" role="group" aria-label={`Bewertung ${row.questionKey} ändern`}>
+                        {[1, 2, 3, 4, 5, 6, 7].map((value) => (
+                          <button
+                            className={row.value === value ? "selected" : ""}
+                            type="button"
+                            key={value}
+                            disabled={Boolean(pendingResponse)}
+                            onClick={() => setValue(row, value)}
+                            title={row.questionLabels?.[value - 1] || `Wert ${value}`}
+                          >
+                            {pendingResponse === row.responseId && pendingValue === value ? <Loader2 size={13} /> : value}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="numeric">{formatDateTime(row.updatedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Keine Bewertungen für diese Filter vorhanden.</div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function SettingsSection({ password, data, actions }) {
   return (
     <div className="content-grid">
@@ -1066,6 +1746,7 @@ export default function AdminPage() {
   const rawActions = {
     importParticipantGroups: useMutation(api.study.importParticipantGroups),
     importMaterials: useMutation(api.study.importMaterials),
+    importAutomaticRankings: useMutation(api.study.importAutomaticRankings),
     syncFixedQuestions: useMutation(api.study.syncFixedQuestions),
     generateAssignments: useMutation(api.study.generateAssignments),
     setStudyStatus: useMutation(api.study.setStudyStatus),
@@ -1074,6 +1755,7 @@ export default function AdminPage() {
     saveTopicPromptImage: useMutation(api.study.saveTopicPromptImage),
     clearTopicPromptImage: useMutation(api.study.clearTopicPromptImage),
     reopenParticipant: useMutation(api.study.reopenParticipant),
+    updateResponse: useMutation(api.study.updateResponse),
     resetStudy: useMutation(api.study.resetStudy)
   };
 
@@ -1133,6 +1815,7 @@ export default function AdminPage() {
     return {
       importParticipantGroups: wrap(rawActions.importParticipantGroups),
       importMaterials: wrap(rawActions.importMaterials),
+      importAutomaticRankings: wrap(rawActions.importAutomaticRankings),
       syncFixedQuestions: wrap(rawActions.syncFixedQuestions),
       generateAssignments: wrap(rawActions.generateAssignments),
       setStudyStatus: wrap(rawActions.setStudyStatus),
@@ -1141,12 +1824,14 @@ export default function AdminPage() {
       saveTopicPromptImage: wrap(rawActions.saveTopicPromptImage),
       clearTopicPromptImage: wrap(rawActions.clearTopicPromptImage),
       reopenParticipant: wrap(rawActions.reopenParticipant),
+      updateResponse: wrap(rawActions.updateResponse),
       resetStudy: wrap(rawActions.resetStudy)
     };
   }, [
     rawActions.clearTopicPromptImage,
     rawActions.generateAssignments,
     rawActions.generatePromptImageUploadUrl,
+    rawActions.importAutomaticRankings,
     rawActions.importMaterials,
     rawActions.importParticipantGroups,
     rawActions.reopenParticipant,
@@ -1154,6 +1839,7 @@ export default function AdminPage() {
     rawActions.saveTopicPromptImage,
     rawActions.setStudyStatus,
     rawActions.syncFixedQuestions,
+    rawActions.updateResponse,
     rawActions.updateFeedbackOrder,
     refresh
   ]);
@@ -1205,10 +1891,11 @@ export default function AdminPage() {
       )}
 
       {section === "overview" && <Overview password={password} data={dashboard} actions={actions} setSection={setSection} />}
-      {section === "import" && <ImportSection password={password} actions={actions} />}
+      {section === "import" && <ImportSection password={password} data={dashboard} actions={actions} />}
       {section === "materials" && <MaterialsSection password={password} data={dashboard} actions={actions} />}
       {section === "links" && <LinksSection data={dashboard} />}
       {section === "results" && <ResultsSection password={password} data={dashboard} exportCsv={exportCsv} reopenParticipant={actions.reopenParticipant} />}
+      {section === "corrections" && <CorrectionSection password={password} data={dashboard} updateResponse={actions.updateResponse} />}
       {section === "settings" && <SettingsSection password={password} data={dashboard} actions={actions} />}
     </Shell>
   );

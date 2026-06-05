@@ -447,6 +447,128 @@ a {
   gap: 14px;
 }
 
+.result-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.automatic-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.automatic-preview-grid .notice {
+  display: grid;
+  gap: 2px;
+  padding: 14px;
+}
+
+.automatic-preview-grid strong {
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.automatic-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.automatic-summary span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 0 11px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.essay-ranking-list {
+  display: grid;
+  gap: 12px;
+}
+
+.essay-ranking-item {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.essay-ranking-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.essay-ranking-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.essay-ranking-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.essay-ranking-item summary::before {
+  content: "›";
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--accent-strong);
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.essay-ranking-item[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.essay-ranking-item summary > span:first-child {
+  min-width: 0;
+  margin-right: auto;
+}
+
+.essay-ranking-content {
+  display: grid;
+  gap: 10px;
+  padding: 10px 0 6px 38px;
+}
+
+.search-field {
+  position: relative;
+  display: block;
+}
+
+.search-field svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  color: var(--faint);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-field .field {
+  padding-left: 38px;
+}
+
 .prompt-upload-list {
   display: grid;
   gap: 12px;
@@ -624,8 +746,58 @@ a {
 }
 
 .analysis-table,
-.heat-table {
+.heat-table,
+.automatic-comparison-table,
+.ranking-comparison-table,
+.annotator-ranking-table {
   min-width: 860px;
+}
+
+.annotator-ranking-table {
+  min-width: 720px;
+}
+
+.editable-results-table {
+  min-width: 1080px;
+}
+
+.editable-results-table td:nth-child(4) {
+  max-width: 340px;
+}
+
+.rating-edit-control {
+  display: grid;
+  width: max-content;
+  grid-template-columns: repeat(7, 32px);
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  padding: 4px;
+}
+
+.rating-edit-control button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.rating-edit-control button:hover {
+  background: var(--surface);
+  color: var(--accent-strong);
+}
+
+.rating-edit-control button.selected {
+  background: var(--accent);
+  color: oklch(0.99 0.006 274);
+  box-shadow: var(--shadow-small);
 }
 
 .score-cell {
@@ -1425,6 +1597,8 @@ button.intro-progress-step:focus-visible {
 @media (max-width: 1180px) {
   .metric-grid,
   .three-col,
+  .result-filter-grid,
+  .automatic-preview-grid,
   .criteria-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1534,6 +1708,8 @@ button.intro-progress-step:focus-visible {
   .metric-grid,
   .three-col,
   .form-grid,
+  .result-filter-grid,
+  .automatic-preview-grid,
   .criteria-list {
     grid-template-columns: 1fr;
   }
