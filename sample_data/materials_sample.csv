@@ -1,4 +1,4 @@
-topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,essayText,methodKey,feedbackText
+topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText
 anschaffung,Anschaffung,"
 Stell dir Folgendes vor: Der Förderverein eurer Schule hat genügend Geld, um für die Schule etwas Größeres zu kaufen. Hierfür gibt es zwei Vorschläge:
     1. Eine Gruppe von Schülern schlägt vor, verschiedene Sport- und Spielgeräte zu kaufen, die sich die Schüler ausleihen können. Damit können sie sich auf dem Pausenhof austoben.
@@ -7,7 +7,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,33977,Essay 33977 (9th grade),"Liebe Frau Grotje,
+",,33977,Essay 33977,9,"Liebe Frau Grotje,
 ich bin für den ersten Vorschlag,
 dass die Schule verschiedene Sportund Spielgeräte kaufen sollte.
 Mein erstes Argument ist, dass es
@@ -28,7 +28,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,33977,Essay 33977 (9th grade),"Liebe Frau Grotje,
+",,33977,Essay 33977,9,"Liebe Frau Grotje,
 ich bin für den ersten Vorschlag,
 dass die Schule verschiedene Sportund Spielgeräte kaufen sollte.
 Mein erstes Argument ist, dass es
@@ -68,7 +68,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,33977,Essay 33977 (9th grade),"Liebe Frau Grotje,
+",,33977,Essay 33977,9,"Liebe Frau Grotje,
 ich bin für den ersten Vorschlag,
 dass die Schule verschiedene Sportund Spielgeräte kaufen sollte.
 Mein erstes Argument ist, dass es
@@ -89,7 +89,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34173,Essay 34173 (9th grade),"Liebe Frau, Grotje,
+",,34173,Essay 34173,9,"Liebe Frau, Grotje,
 die neue Anschaffung(en) des Fördervereins
 betreffend möchte ich Ihnen nun meine Meinung
 darlegen:
@@ -116,7 +116,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34173,Essay 34173 (9th grade),"Liebe Frau, Grotje,
+",,34173,Essay 34173,9,"Liebe Frau, Grotje,
 die neue Anschaffung(en) des Fördervereins
 betreffend möchte ich Ihnen nun meine Meinung
 darlegen:
@@ -162,7 +162,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34173,Essay 34173 (9th grade),"Liebe Frau, Grotje,
+",,34173,Essay 34173,9,"Liebe Frau, Grotje,
 die neue Anschaffung(en) des Fördervereins
 betreffend möchte ich Ihnen nun meine Meinung
 darlegen:
@@ -189,7 +189,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34282,Essay 34282 (9th grade),"Köln, 18.6.2015
+",,34282,Essay 34282,9,"Köln, 18.6.2015
 Sehr geehrte Frau Grotje,
 ich finde die Idee, dass der Eingangsbereich unserer
 Schule mit Sofas und Sesseln ausgestattet werden soll,
@@ -228,7 +228,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34282,Essay 34282 (9th grade),"Köln, 18.6.2015
+",,34282,Essay 34282,9,"Köln, 18.6.2015
 Sehr geehrte Frau Grotje,
 ich finde die Idee, dass der Eingangsbereich unserer
 Schule mit Sofas und Sesseln ausgestattet werden soll,
@@ -266,7 +266,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34282,Essay 34282 (9th grade),"Köln, 18.6.2015
+",,34282,Essay 34282,9,"Köln, 18.6.2015
 Sehr geehrte Frau Grotje,
 ich finde die Idee, dass der Eingangsbereich unserer
 Schule mit Sofas und Sesseln ausgestattet werden soll,
@@ -297,7 +297,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34341,Essay 34341 (9th grade),"Sehr geehrte Frau Grotje,
+",,34341,Essay 34341,9,"Sehr geehrte Frau Grotje,
 bezüglich der Entscheidung des Fördervereins, möchte
 ich Sie hiermit von meinen Argumenten überzeugen.
 Ich schlage vor, verschiedene Sport- und Spielgeräte
@@ -342,7 +342,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34341,Essay 34341 (9th grade),"Sehr geehrte Frau Grotje,
+",,34341,Essay 34341,9,"Sehr geehrte Frau Grotje,
 bezüglich der Entscheidung des Fördervereins, möchte
 ich Sie hiermit von meinen Argumenten überzeugen.
 Ich schlage vor, verschiedene Sport- und Spielgeräte
@@ -386,7 +386,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34341,Essay 34341 (9th grade),"Sehr geehrte Frau Grotje,
+",,34341,Essay 34341,9,"Sehr geehrte Frau Grotje,
 bezüglich der Entscheidung des Fördervereins, möchte
 ich Sie hiermit von meinen Argumenten überzeugen.
 Ich schlage vor, verschiedene Sport- und Spielgeräte
@@ -417,7 +417,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34661,Essay 34661 (5th grade),"Hallo Frau Grotje
+",,34661,Essay 34661,5,"Hallo Frau Grotje
 ich habe mich für den 1. entschieden
 weil ich gerne Sport z. B. mit Trampoline,
 Turniere Völkerball usw. so geht auch
@@ -430,7 +430,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34661,Essay 34661 (5th grade),"Hallo Frau Grotje
+",,34661,Essay 34661,5,"Hallo Frau Grotje
 ich habe mich für den 1. entschieden
 weil ich gerne Sport z. B. mit Trampoline,
 Turniere Völkerball usw. so geht auch
@@ -450,7 +450,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34661,Essay 34661 (5th grade),"Hallo Frau Grotje
+",,34661,Essay 34661,5,"Hallo Frau Grotje
 ich habe mich für den 1. entschieden
 weil ich gerne Sport z. B. mit Trampoline,
 Turniere Völkerball usw. so geht auch
@@ -463,7 +463,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34719,Essay 34719 (5th grade),"Sehr geehrte Frau Grotje,
+",,34719,Essay 34719,5,"Sehr geehrte Frau Grotje,
 ich möchte unbedingt die Sessel und Sofas im
 Eingangsbereich. Das würde es viel gemütlicher
 machen. Außerdem wenn es draußen regnet
@@ -478,7 +478,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34719,Essay 34719 (5th grade),"Sehr geehrte Frau Grotje,
+",,34719,Essay 34719,5,"Sehr geehrte Frau Grotje,
 ich möchte unbedingt die Sessel und Sofas im
 Eingangsbereich. Das würde es viel gemütlicher
 machen. Außerdem wenn es draußen regnet
@@ -500,7 +500,7 @@ Der Förderverein möchte die Entscheidung nicht alleine treffen.
 Deshalb bittet er jeden Schüler, seine Meinung mitzuteilen. 
 Entscheide dich für einen der beiden Vorschläge und schreibe einen Brief mit deinem Vorschlag an die Vorsitzende des Fördervereins, Frau Grotje. 
 Denke daran, dass du Frau Grotje von deinem Vorschlag überzeugen willst.
-",,34719,Essay 34719 (5th grade),"Sehr geehrte Frau Grotje,
+",,34719,Essay 34719,5,"Sehr geehrte Frau Grotje,
 ich möchte unbedingt die Sessel und Sofas im
 Eingangsbereich. Das würde es viel gemütlicher
 machen. Außerdem wenn es draußen regnet
@@ -517,7 +517,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,33931,Essay 33931 (5th grade),"Ich würde mit mein Freund/meine Freundin
+",,33931,Essay 33931,5,"Ich würde mit mein Freund/meine Freundin
 sprechen damit er/sie sich meldet
 weil, wenn sie sich nicht meldet
 würd die ganze Klasse bestraft,
@@ -539,7 +539,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,33931,Essay 33931 (5th grade),"Ich würde mit mein Freund/meine Freundin
+",,33931,Essay 33931,5,"Ich würde mit mein Freund/meine Freundin
 sprechen damit er/sie sich meldet
 weil, wenn sie sich nicht meldet
 würd die ganze Klasse bestraft,
@@ -571,7 +571,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,33931,Essay 33931 (5th grade),"Ich würde mit mein Freund/meine Freundin
+",,33931,Essay 33931,5,"Ich würde mit mein Freund/meine Freundin
 sprechen damit er/sie sich meldet
 weil, wenn sie sich nicht meldet
 würd die ganze Klasse bestraft,
@@ -593,7 +593,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34122,Essay 34122 (9th grade),"Also ich würde ihn nicht verpetzen
+",,34122,Essay 34122,9,"Also ich würde ihn nicht verpetzen
 da es ja mein Kumpel ist und auch wenn
 der Schaden dann von der Klasse übernommen
 werden muss würde ich das besser finden
@@ -615,7 +615,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34122,Essay 34122 (9th grade),"Also ich würde ihn nicht verpetzen
+",,34122,Essay 34122,9,"Also ich würde ihn nicht verpetzen
 da es ja mein Kumpel ist und auch wenn
 der Schaden dann von der Klasse übernommen
 werden muss würde ich das besser finden
@@ -656,7 +656,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34122,Essay 34122 (9th grade),"Also ich würde ihn nicht verpetzen
+",,34122,Essay 34122,9,"Also ich würde ihn nicht verpetzen
 da es ja mein Kumpel ist und auch wenn
 der Schaden dann von der Klasse übernommen
 werden muss würde ich das besser finden
@@ -678,7 +678,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34411,Essay 34411 (5th grade),"Ich würde mit meinen Freund reden und ihm
+",,34411,Essay 34411,5,"Ich würde mit meinen Freund reden und ihm
 sagen dass er es der Lehrerin sagen
 soll weil es sonst noch schlimmer wird. Weil
 wenn man einen Fehler zugibt kriegt man
@@ -696,7 +696,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34411,Essay 34411 (5th grade),"Ich würde mit meinen Freund reden und ihm
+",,34411,Essay 34411,5,"Ich würde mit meinen Freund reden und ihm
 sagen dass er es der Lehrerin sagen
 soll weil es sonst noch schlimmer wird. Weil
 wenn man einen Fehler zugibt kriegt man
@@ -730,7 +730,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34411,Essay 34411 (5th grade),"Ich würde mit meinen Freund reden und ihm
+",,34411,Essay 34411,5,"Ich würde mit meinen Freund reden und ihm
 sagen dass er es der Lehrerin sagen
 soll weil es sonst noch schlimmer wird. Weil
 wenn man einen Fehler zugibt kriegt man
@@ -748,7 +748,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34524,Essay 34524 (5th grade),"Ich würde zu meiner besten Freundin
+",,34524,Essay 34524,5,"Ich würde zu meiner besten Freundin
 gehen und ihr den Vorschlag machen
 der Lehrerin alles zu beichten weil das sonst
 rauskommt und alle aus der Klasse deswegen
@@ -778,7 +778,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34524,Essay 34524 (5th grade),"Ich würde zu meiner besten Freundin
+",,34524,Essay 34524,5,"Ich würde zu meiner besten Freundin
 gehen und ihr den Vorschlag machen
 der Lehrerin alles zu beichten weil das sonst
 rauskommt und alle aus der Klasse deswegen
@@ -827,7 +827,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34524,Essay 34524 (5th grade),"Ich würde zu meiner besten Freundin
+",,34524,Essay 34524,5,"Ich würde zu meiner besten Freundin
 gehen und ihr den Vorschlag machen
 der Lehrerin alles zu beichten weil das sonst
 rauskommt und alle aus der Klasse deswegen
@@ -857,7 +857,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34698,Essay 34698 (9th grade),"Ich würde der Lehrerin nichts sagen,
+",,34698,Essay 34698,9,"Ich würde der Lehrerin nichts sagen,
 weil ich zu meinem Freund stehen
 würde und mir wäre es egal ob
 das dann aus der Klassenkasse bezahlt würde,
@@ -878,7 +878,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34698,Essay 34698 (9th grade),"Ich würde der Lehrerin nichts sagen,
+",,34698,Essay 34698,9,"Ich würde der Lehrerin nichts sagen,
 weil ich zu meinem Freund stehen
 würde und mir wäre es egal ob
 das dann aus der Klassenkasse bezahlt würde,
@@ -915,7 +915,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34698,Essay 34698 (9th grade),"Ich würde der Lehrerin nichts sagen,
+",,34698,Essay 34698,9,"Ich würde der Lehrerin nichts sagen,
 weil ich zu meinem Freund stehen
 würde und mir wäre es egal ob
 das dann aus der Klassenkasse bezahlt würde,
@@ -936,7 +936,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34862,Essay 34862 (9th grade),"Ich würde meinem besten Freund sagen, dass er
+",,34862,Essay 34862,9,"Ich würde meinem besten Freund sagen, dass er
 erstmal in Ruhe mit seinen Eltern sprechen
 soll und ihnen den Vorfall erklären soll.
 Danach sollte er mit der Lehrerin sprechen
@@ -956,7 +956,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34862,Essay 34862 (9th grade),"Ich würde meinem besten Freund sagen, dass er
+",,34862,Essay 34862,9,"Ich würde meinem besten Freund sagen, dass er
 erstmal in Ruhe mit seinen Eltern sprechen
 soll und ihnen den Vorfall erklären soll.
 Danach sollte er mit der Lehrerin sprechen
@@ -989,7 +989,7 @@ Da sich der Schuldige nicht meldet, gibt sie dem Schuldigen bis zum nächsten Ta
 Falls er sich nicht meldet, wird der Schaden aus der gemeinsamen Klassenkasse bezahlt. 
 Schreibe auf, wie du dich verhältst. Sagst du der Lehrerin, was du weißt oder schweigst du? 
 Oder sprichst du mit deinem Freund und was würdest du ihm sagen? Warum denkst Du, ist es richtig, sich so zu verhalten? 
-",,34862,Essay 34862 (9th grade),"Ich würde meinem besten Freund sagen, dass er
+",,34862,Essay 34862,9,"Ich würde meinem besten Freund sagen, dass er
 erstmal in Ruhe mit seinen Eltern sprechen
 soll und ihnen den Vorfall erklären soll.
 Danach sollte er mit der Lehrerin sprechen
@@ -1011,7 +1011,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,33646,Essay 33646 (5th grade),"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
+",,33646,Essay 33646,5,"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
 gefahren und gegen das blaue Auto. Nach meiner Meinung ist das rote
 Auto schuld.",no_issues,"Deine Meinung ist klar: Du denkst, das rote Auto ist schuld. Das ist super! Um deine Argumentation noch stärker zu machen, könntest du erklären, warum du denkst, dass das rote Auto schuld ist. Zum Beispiel könntest du sagen, dass das rote Auto in die Fahrbahn des blauen Autos gefahren ist, wie in der Beschreibung steht. Außerdem wäre es hilfreich, wenn du auch den Radfahrer erwähnen würdest und warum du denkst, dass er nicht schuld ist. Versuche, deine Gedanken in ganzen Sätzen auszudrücken, damit es leichter zu verstehen ist, was du meinst. Zum Beispiel: 'Ich denke, das rote Auto ist schuld, weil es in die Fahrbahn des blauen Autos gefahren ist. Der Radfahrer ist zur Hälfte auf die Spur des roten Autos gefahren, aber ich denke, das rote Auto hätte trotzdem ausweichen können.' So kannst du deine Argumentation noch besser darstellen."
 unfall,Unfall,"
@@ -1026,7 +1026,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,33646,Essay 33646 (5th grade),"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
+",,33646,Essay 33646,5,"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
 gefahren und gegen das blaue Auto. Nach meiner Meinung ist das rote
 Auto schuld.",llama_unified_v1,"Hinweis 1 (arrangement):
 Dein Text ist schon gut, aber es fehlt ein bisschen an Einleitung und Abschluss. Um deinen Text zu verbessern, könntest du am Anfang schreiben, dass du den Unfall gesehen hast. Zum Beispiel: 'Ich habe den Unfall gesehen.' Das hilft dem Leser zu verstehen, aus welcher Perspektive du den Unfall beschreibst. Am Ende könntest du auch noch einmal zusammenfassen, was du gesehen hast, wie zum Beispiel: 'Ich denke, das ist alles, was ich gesehen habe.' Das gibt deinem Text einen schönen Abschluss und hilft dem Leser, alles noch einmal zu verstehen.
@@ -1063,7 +1063,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,33646,Essay 33646 (5th grade),"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
+",,33646,Essay 33646,5,"Der Fahrradfahrer wollte weiter. Das rote Auto ist zur Seite
 gefahren und gegen das blaue Auto. Nach meiner Meinung ist das rote
 Auto schuld.",llama_baseline_v2,"Dein Text ist schon gut, aber du könntest ihn noch verbessern, indem du den Satz 'Nach meiner Meinung ist das rote Auto schuld' erklärst. Du könntest sagen, warum du denkst, dass das rote Auto schuld ist. Zum Beispiel könntest du hinzufügen, dass das rote Auto auf die Fahrbahn des blauen Autos gefahren ist. So wird dein Text noch überzeugender und es ist klarer, warum du das rote Auto für schuldig hältst."
 unfall,Unfall,"
@@ -1078,7 +1078,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34283,Essay 34283 (9th grade),"Meiner Meinung nach ist der Radfahrer am Unfall
+",,34283,Essay 34283,9,"Meiner Meinung nach ist der Radfahrer am Unfall
 schuld, da er einfach auf die Straße gelaufen ist ohne
 nach kommenden Autos zu schauen.
 Der Fahrer des roten Autos hingegen wollte nur
@@ -1102,7 +1102,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34283,Essay 34283 (9th grade),"Meiner Meinung nach ist der Radfahrer am Unfall
+",,34283,Essay 34283,9,"Meiner Meinung nach ist der Radfahrer am Unfall
 schuld, da er einfach auf die Straße gelaufen ist ohne
 nach kommenden Autos zu schauen.
 Der Fahrer des roten Autos hingegen wollte nur
@@ -1133,7 +1133,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34283,Essay 34283 (9th grade),"Meiner Meinung nach ist der Radfahrer am Unfall
+",,34283,Essay 34283,9,"Meiner Meinung nach ist der Radfahrer am Unfall
 schuld, da er einfach auf die Straße gelaufen ist ohne
 nach kommenden Autos zu schauen.
 Der Fahrer des roten Autos hingegen wollte nur
@@ -1157,7 +1157,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34396,Essay 34396 (9th grade),"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
+",,34396,Essay 34396,9,"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
 wäre er nicht einfach über die Straße gefahren hätte
 er im rotfarbenen Auto nicht ausweichen müssen
 und es wäre gar nicht zu diesem Unfall gekommen!",no_issues,"Deine Meinung ist klar und du hast eine gute Grundidee, warum der Radfahrer schuld sein könnte. Allerdings gibt es ein paar Dinge, die du noch verbessern kannst. Erstens solltest du deine Sätze ein bisschen länger und ausführlicher machen, um deine Argumente besser zu erklären. Zum Beispiel könntest du sagen, warum der Radfahrer nicht einfach über die Straße fahren sollte. Zweitens solltest du auch die Perspektive des Autofahrers berücksichtigen. Vielleicht hat der Autofahrer auch einen Fehler gemacht, indem er in die Fahrbahn des blauen Autos gefahren ist. Es wäre gut, wenn du beide Seiten der Geschichte betrachten würdest. Außerdem solltest du auf die Rechtschreibung und Grammatik achten, zum Beispiel 'wäre er nicht einfach über die Straße gefahren' sollte 'wenn er nicht einfach über die Straße gefahren wäre' sein. Mit diesen Tipps kannst du deine Argumentation noch stärker machen und eine bessere Ausarbeitung deiner Meinung zeigen."
@@ -1173,7 +1173,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34396,Essay 34396 (9th grade),"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
+",,34396,Essay 34396,9,"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
 wäre er nicht einfach über die Straße gefahren hätte
 er im rotfarbenen Auto nicht ausweichen müssen
 und es wäre gar nicht zu diesem Unfall gekommen!",llama_unified_v1,"Hinweis 1 (arrangement):
@@ -1199,7 +1199,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34396,Essay 34396 (9th grade),"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
+",,34396,Essay 34396,9,"Ich denke, dass der Radfahrer mehr Schuld daran hat, denn
 wäre er nicht einfach über die Straße gefahren hätte
 er im rotfarbenen Auto nicht ausweichen müssen
 und es wäre gar nicht zu diesem Unfall gekommen!",llama_baseline_v2,"Dein Text ist schon gut, aber es gibt ein paar Möglichkeiten, ihn zu verbessern. Zum Beispiel könntest du den Satz 'wäre er nicht einfach über die Straße gefahren hätte' ein bisschen umformulieren, um ihn flüssiger klingen zu lassen. Versuche, ihn in einen Nebensatz umzuwandeln, der mit 'denn' beginnt und 'wenn' verwendet. Außerdem fehlt ein Komma nach 'Unfall', um den Satz besser zu strukturieren. Schließlich könntest du noch einen weiteren Satz hinzufügen, um deine Meinung zu untermauern und zu erklären, warum der Radfahrer vorsichtiger sein sollte."
@@ -1215,7 +1215,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34477,Essay 34477 (5th grade),"Meiner Meinung nach sind beide etwas schuld.
+",,34477,Essay 34477,5,"Meiner Meinung nach sind beide etwas schuld.
 schuld, weil das Fahrrad die Spur gewechselt hat
 und auf das rote Auto zugefahren es.
 Der Autofahrer könnte eigentlich schnell weiter
@@ -1235,7 +1235,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34477,Essay 34477 (5th grade),"Meiner Meinung nach sind beide etwas schuld.
+",,34477,Essay 34477,5,"Meiner Meinung nach sind beide etwas schuld.
 schuld, weil das Fahrrad die Spur gewechselt hat
 und auf das rote Auto zugefahren es.
 Der Autofahrer könnte eigentlich schnell weiter
@@ -1280,7 +1280,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34477,Essay 34477 (5th grade),"Meiner Meinung nach sind beide etwas schuld.
+",,34477,Essay 34477,5,"Meiner Meinung nach sind beide etwas schuld.
 schuld, weil das Fahrrad die Spur gewechselt hat
 und auf das rote Auto zugefahren es.
 Der Autofahrer könnte eigentlich schnell weiter
@@ -1300,7 +1300,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34570,Essay 34570 (5th grade),"Also der Fahrradfahrer hat Schuld (meiner Meinung
+",,34570,Essay 34570,5,"Also der Fahrradfahrer hat Schuld (meiner Meinung
 nach), denn er hätte besser gucken sollen.
 Der Fahrer des roten Wagens hätte aber auch
 nicht so doll ausweichen müssen. Trotzdem ist meine
@@ -1318,7 +1318,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34570,Essay 34570 (5th grade),"Also der Fahrradfahrer hat Schuld (meiner Meinung
+",,34570,Essay 34570,5,"Also der Fahrradfahrer hat Schuld (meiner Meinung
 nach), denn er hätte besser gucken sollen.
 Der Fahrer des roten Wagens hätte aber auch
 nicht so doll ausweichen müssen. Trotzdem ist meine
@@ -1364,7 +1364,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34570,Essay 34570 (5th grade),"Also der Fahrradfahrer hat Schuld (meiner Meinung
+",,34570,Essay 34570,5,"Also der Fahrradfahrer hat Schuld (meiner Meinung
 nach), denn er hätte besser gucken sollen.
 Der Fahrer des roten Wagens hätte aber auch
 nicht so doll ausweichen müssen. Trotzdem ist meine
@@ -1382,7 +1382,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34723,Essay 34723 (5th grade),"Der Fahrradfahrer ist schuld, denn
+",,34723,Essay 34723,5,"Der Fahrradfahrer ist schuld, denn
 er hat nicht geguckt als er über
 die Straße gegangen ist. Deswegen musste
 das rote Auto ausweichen und gegen das
@@ -1399,7 +1399,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34723,Essay 34723 (5th grade),"Der Fahrradfahrer ist schuld, denn
+",,34723,Essay 34723,5,"Der Fahrradfahrer ist schuld, denn
 er hat nicht geguckt als er über
 die Straße gegangen ist. Deswegen musste
 das rote Auto ausweichen und gegen das
@@ -1420,7 +1420,7 @@ Inzwischen ist die Polizei eingetroffen und befragt alle Personen am Unfallort.
 Der Fahrer des roten Autos und der Radfahrer geben sich gegenseitig die Schuld am Unfall. 
 Da du den Unfall beobachtet hast, will die Polizei von dir wissen, wer deiner Meinung nach am Unfall Schuld ist. 
 Deine Aufgabe ist es nun, aufzuschreiben, wer deiner Meinung nach am Unfall Schuld ist und warum. 
-",,34723,Essay 34723 (5th grade),"Der Fahrradfahrer ist schuld, denn
+",,34723,Essay 34723,5,"Der Fahrradfahrer ist schuld, denn
 er hat nicht geguckt als er über
 die Straße gegangen ist. Deswegen musste
 das rote Auto ausweichen und gegen das

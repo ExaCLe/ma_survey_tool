@@ -14,6 +14,7 @@ export default defineSchema({
     key: v.string(),
     name: v.string(),
     initial: v.string(),
+    gradeLevel: v.optional(v.string()),
     order: v.number(),
     topicId: v.optional(v.id("topics"))
   }).index("by_key", ["key"]),
@@ -47,6 +48,7 @@ export default defineSchema({
     topicId: v.id("topics"),
     key: v.string(),
     title: v.string(),
+    gradeLevel: v.optional(v.string()),
     text: v.string(),
     order: v.number()
   })
@@ -63,6 +65,7 @@ export default defineSchema({
   questions: defineTable({
     key: v.string(),
     text: v.string(),
+    description: v.optional(v.string()),
     labels: v.array(v.string()),
     order: v.number()
   }).index("by_key", ["key"]),

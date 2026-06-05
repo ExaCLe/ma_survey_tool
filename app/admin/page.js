@@ -29,33 +29,9 @@ import { useConvex, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const defaultQuestions = [
-  {
-    key: "spezifitaet",
-    text: "Das Feedback ist spezifisch und bezieht sich konkret auf den Text.",
-    labels: ["gar nicht spezifisch", "kaum spezifisch", "eher unspezifisch", "teils/teils", "eher spezifisch", "sehr spezifisch", "außerordentlich spezifisch"]
-  },
-  {
-    key: "nuetzlichkeit",
-    text: "Das Feedback ist für die Überarbeitung des Essays nützlich.",
-    labels: ["gar nicht nützlich", "kaum nützlich", "eher nicht nützlich", "teils/teils", "eher nützlich", "sehr nützlich", "außerordentlich nützlich"]
-  },
-  {
-    key: "verstaendlichkeit",
-    text: "Das Feedback ist klar und verständlich formuliert.",
-    labels: ["gar nicht klar", "kaum klar", "eher unklar", "teils/teils", "eher klar", "sehr klar", "außerordentlich klar"]
-  },
-  {
-    key: "qualitaet",
-    text: "Die Gesamtqualität des Feedbacks ist hoch.",
-    labels: ["sehr niedrig", "niedrig", "eher niedrig", "mittel", "eher hoch", "hoch", "sehr hoch"]
-  }
-];
-
 const nav = [
   ["overview", "Überblick", Home],
   ["import", "Import", Upload],
-  ["questions", "Fragen", ListChecks],
   ["materials", "Material", FileText],
   ["links", "Links", Link2],
   ["results", "Ergebnisse", BarChart3],
@@ -342,7 +318,9 @@ function Overview({ password, data, actions, setSection }) {
                     </td>
                     <td>
                       <strong>{group.name}</strong>
-                      <div className="muted small">{count} Teilnehmende</div>
+                      <div className="muted small">
+                        {count} Teilnehmende{group.gradeLevel ? ` · Klasse ${group.gradeLevel}` : ""}
+                      </div>
                     </td>
                     <td>{topic?.title || "kein Thema"}</td>
                   </tr>
@@ -375,7 +353,7 @@ function Overview({ password, data, actions, setSection }) {
 
 function ImportSection({ password, actions }) {
   const [participantCsv, setParticipantCsv] = useState("groupKey,firstName\nA,Anna\nA,Ben\nA,Cem\nB,Dana\nB,Emil\nB,Finn");
-  const [materialCsv, setMaterialCsv] = useState("topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,essayText,methodKey,feedbackText\nargumentation,Argumentation,\"Schreibe einen argumentativen Essay.\",,essay-01,Essay 1,\"Essaytext...\",method-a,\"Feedbacktext...\"");
+  const [materialCsv, setMaterialCsv] = useState("topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText\nargumentation,Argumentation,\"Schreibe einen argumentativen Essay.\",,essay-01,Essay 1,9,\"Essaytext...\",method-a,\"Feedbacktext...\"");
   const [message, setMessage] = useState("");
 
   async function importParticipants() {
@@ -403,6 +381,7 @@ function ImportSection({ password, actions }) {
       promptImageUrl: String(row.promptImageUrl || row.promptImage || "").trim(),
       essayKey: String(row.essayKey || "").trim(),
       essayTitle: String(row.essayTitle || "").trim(),
+      gradeLevel: String(row.gradeLevel || row.grade || row.klasse || "").trim(),
       essayText: String(row.essayText || "").trim(),
       methodKey: String(row.methodKey || "").trim(),
       feedbackText: String(row.feedbackText || "").trim()
@@ -444,7 +423,7 @@ function ImportSection({ password, actions }) {
           </div>
           <p className="muted">Long-CSV: eine Zeile pro Feedbacktext eines Essays.</p>
           <div className="notice">
-            Pflichtspalten: <strong>topicKey</strong>, <strong>topicTitle</strong>, <strong>prompt</strong>, <strong>essayKey</strong>, <strong>essayTitle</strong>, <strong>essayText</strong>, <strong>methodKey</strong>, <strong>feedbackText</strong>. Optional: <strong>promptImageUrl</strong>
+            Pflichtspalten: <strong>topicKey</strong>, <strong>topicTitle</strong>, <strong>prompt</strong>, <strong>essayKey</strong>, <strong>essayTitle</strong>, <strong>gradeLevel</strong>, <strong>essayText</strong>, <strong>methodKey</strong>, <strong>feedbackText</strong>. Optional: <strong>promptImageUrl</strong>
           </div>
           <CsvDropZone
             label="Material-CSV hier ablegen oder auswählen"
@@ -457,67 +436,6 @@ function ImportSection({ password, actions }) {
           </button>
         </section>
       </div>
-    </div>
-  );
-}
-
-function QuestionsSection({ password, data, saveQuestions }) {
-  const [questions, setQuestions] = useState(() => (data.questions.length ? data.questions : defaultQuestions));
-  const [message, setMessage] = useState("");
-  const update = (index, patch) => setQuestions((items) => items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
-  return (
-    <div className="content-grid">
-      {message && <div className="notice success">{message}</div>}
-      <section className="panel">
-        <div className="panel-title-row">
-          <h2 className="panel-title">
-            <ListChecks size={19} /> Likert-Fragen
-          </h2>
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={async () => {
-              await saveQuestions({
-                adminPassword: password,
-                questions: questions.map(({ key, text, labels }) => ({ key, text, labels }))
-              });
-              setMessage("Fragen gespeichert.");
-            }}
-          >
-            <CheckCircle2 size={16} /> Fragen speichern
-          </button>
-        </div>
-        <div style={{ display: "grid", gap: 18 }}>
-          {questions.map((question, index) => (
-            <div className="panel" style={{ boxShadow: "none" }} key={index}>
-              <div className="form-grid">
-                <label className="field-label">
-                  Key
-                  <input className="field" value={question.key} onChange={(event) => update(index, { key: event.target.value })} />
-                </label>
-                <label className="field-label">
-                  Fragetext
-                  <input className="field" value={question.text} onChange={(event) => update(index, { text: event.target.value })} />
-                </label>
-                {Array.from({ length: 7 }, (_, labelIndex) => (
-                  <label className="field-label" key={labelIndex}>
-                    Label {labelIndex + 1}
-                    <input
-                      className="field"
-                      value={question.labels[labelIndex] || ""}
-                      onChange={(event) => {
-                        const labels = [...question.labels];
-                        labels[labelIndex] = event.target.value;
-                        update(index, { labels });
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
@@ -535,18 +453,21 @@ function MaterialsSection({ password, data, actions }) {
     }
     return map;
   }, [data]);
-  const essayCountsByTopic = data.topics.map((topic) => ({
-    topic,
-    essayCount: data.essays.filter((essay) => essay.topicId === topic._id).length
-  }));
+  const essayCountsByTopicGrade = data.topics.flatMap((topic) =>
+    ["5", "9"].map((gradeLevel) => ({
+      topic,
+      gradeLevel,
+      essayCount: data.essays.filter((essay) => essay.topicId === topic._id && essay.gradeLevel === gradeLevel).length
+    }))
+  );
   const incompleteEssayCount = data.essays.filter((essay) => (feedbacksByEssay.get(essay._id) || []).length !== 3).length;
   const canGenerateAssignments =
     data.topics.length === 3 &&
     data.groups.length === 6 &&
     data.essays.length > 0 &&
     incompleteEssayCount === 0 &&
-    essayCountsByTopic.every((item) => item.essayCount > 0 && item.essayCount % 2 === 0) &&
-    new Set(essayCountsByTopic.map((item) => item.essayCount)).size === 1;
+    essayCountsByTopicGrade.every((item) => item.essayCount > 0) &&
+    new Set(essayCountsByTopicGrade.map((item) => item.essayCount)).size === 1;
 
   async function move(essayId, feedbackId, direction) {
     const list = [...(feedbacksByEssay.get(essayId) || [])];
@@ -592,7 +513,7 @@ function MaterialsSection({ password, data, actions }) {
           </button>
         </div>
         <p className="muted">
-          Die App weist sechs Gruppen zufällig drei Themen zu, teilt Essays pro Thema in zwei nicht überlappende Hälften und randomisiert die Feedbackreihenfolge.
+          Die App weist jeder Gruppe zufällig genau ein Thema und genau eine Klassenstufe zu. Gruppen erhalten nur Essays aus dieser Thema-Klassenstufe-Kombination.
         </p>
         <div className={`notice ${canGenerateAssignments ? "success" : "error"}`} style={{ marginTop: 16 }}>
           <strong>{canGenerateAssignments ? "Bereit für Randomisierung." : "Noch nicht bereit für Randomisierung."}</strong>
@@ -601,10 +522,10 @@ function MaterialsSection({ password, data, actions }) {
             <span>{data.groups.length} / 6 Gruppen importiert</span>
             <span>{data.essays.length} Essays importiert</span>
             <span>{incompleteEssayCount === 0 ? "Alle Essays haben 3 Feedbacktexte" : `${incompleteEssayCount} Essays haben nicht genau 3 Feedbacktexte`}</span>
-            {essayCountsByTopic.length > 0 && (
+            {essayCountsByTopicGrade.length > 0 && (
               <span>
-                Essays pro Thema:{" "}
-                {essayCountsByTopic.map(({ topic, essayCount }) => `${topic.title}: ${essayCount}`).join(", ")}
+                Essays pro Thema und Klasse:{" "}
+                {essayCountsByTopicGrade.map(({ topic, gradeLevel, essayCount }) => `${topic.title} ${gradeLevel}: ${essayCount}`).join(", ")}
               </span>
             )}
           </div>
@@ -888,7 +809,7 @@ export default function AdminPage() {
   const rawActions = {
     importParticipantGroups: useMutation(api.study.importParticipantGroups),
     importMaterials: useMutation(api.study.importMaterials),
-    saveQuestions: useMutation(api.study.saveQuestions),
+    syncFixedQuestions: useMutation(api.study.syncFixedQuestions),
     generateAssignments: useMutation(api.study.generateAssignments),
     setStudyStatus: useMutation(api.study.setStudyStatus),
     updateFeedbackOrder: useMutation(api.study.updateFeedbackOrder),
@@ -904,10 +825,17 @@ export default function AdminPage() {
       if (!adminPassword) return;
       setActionError("");
       try {
-        const [nextDashboard, nextExportCsv] = await Promise.all([
+        let [nextDashboard, nextExportCsv] = await Promise.all([
           convex.query(api.study.dashboard, { adminPassword }),
           convex.query(api.study.exportResponsesCsv, { adminPassword })
         ]);
+        if (nextDashboard.responseCount === 0) {
+          await convex.mutation(api.study.syncFixedQuestions, { adminPassword });
+          [nextDashboard, nextExportCsv] = await Promise.all([
+            convex.query(api.study.dashboard, { adminPassword }),
+            convex.query(api.study.exportResponsesCsv, { adminPassword })
+          ]);
+        }
         setDashboard(nextDashboard);
         setExportCsv(nextExportCsv);
         setAuthError("");
@@ -948,7 +876,7 @@ export default function AdminPage() {
     return {
       importParticipantGroups: wrap(rawActions.importParticipantGroups),
       importMaterials: wrap(rawActions.importMaterials),
-      saveQuestions: wrap(rawActions.saveQuestions),
+      syncFixedQuestions: wrap(rawActions.syncFixedQuestions),
       generateAssignments: wrap(rawActions.generateAssignments),
       setStudyStatus: wrap(rawActions.setStudyStatus),
       updateFeedbackOrder: wrap(rawActions.updateFeedbackOrder),
@@ -966,9 +894,9 @@ export default function AdminPage() {
     rawActions.importParticipantGroups,
     rawActions.reopenParticipant,
     rawActions.resetStudy,
-    rawActions.saveQuestions,
     rawActions.saveTopicPromptImage,
     rawActions.setStudyStatus,
+    rawActions.syncFixedQuestions,
     rawActions.updateFeedbackOrder,
     refresh
   ]);
@@ -1021,7 +949,6 @@ export default function AdminPage() {
 
       {section === "overview" && <Overview password={password} data={dashboard} actions={actions} setSection={setSection} />}
       {section === "import" && <ImportSection password={password} actions={actions} />}
-      {section === "questions" && <QuestionsSection password={password} data={dashboard} saveQuestions={actions.saveQuestions} />}
       {section === "materials" && <MaterialsSection password={password} data={dashboard} actions={actions} />}
       {section === "links" && <LinksSection data={dashboard} />}
       {section === "results" && <ResultsSection password={password} data={dashboard} exportCsv={exportCsv} reopenParticipant={actions.reopenParticipant} />}

@@ -53,10 +53,10 @@ Eine Vorlage liegt in [sample_data/participants_template.csv](sample_data/partic
 Long-CSV: eine Zeile pro Feedbacktext eines Essays.
 
 ```csv
-topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,essayText,methodKey,feedbackText
-unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,"Essaytext...",method-a,"Feedbacktext..."
-unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,"Essaytext...",method-b,"Feedbacktext..."
-unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,"Essaytext...",method-c,"Feedbacktext..."
+topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText
+unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,9,"Essaytext...",method-a,"Feedbacktext..."
+unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,9,"Essaytext...",method-b,"Feedbacktext..."
+unfall,Unfall,"<Bildbeschreibung> ...",,essay-01,Essay 1,9,"Essaytext...",method-c,"Feedbacktext..."
 ```
 
 `promptImageUrl` ist optional und kann für externe oder statisch ausgelieferte Bilder genutzt werden. Empfohlen ist der Upload im Adminbereich unter `Material` -> `Promptbilder`; dabei wird die Datei in Convex Storage gespeichert und dem Thema zugeordnet.
@@ -66,10 +66,11 @@ Validierungsregeln vor Aktivierung:
 - genau 6 Gruppen
 - genau 3 Themen
 - jedes Thema hat gleich viele Essays
-- die Essayanzahl pro Thema ist gerade
+- jede Thema-Klassenstufe-Kombination hat gleich viele Essays
 - jeder Essay hat genau 3 Feedbacktexte
-- jedes Thema ist genau 2 Gruppen zugeordnet
-- jede Frage hat genau 7 Labels
+- jeder Essay hat eine Klassenstufe in `gradeLevel` (`5` oder `9`)
+- nach der Generierung ist jedes Thema genau 2 Gruppen zugeordnet, eine pro Klassenstufe
+- die 6 festen Bewertungsfragen sind angelegt und haben jeweils genau 7 Labels
 
 Nach dem Import klickst du in `Material` auf `Gruppen, Essays und Feedbackreihenfolge generieren`. Danach kannst du Feedbackreihenfolgen vor dem Studienstart manuell verschieben.
 Falls ein Schreibauftrag ein Bild hat, lade es vorher in `Material` -> `Promptbilder` beim passenden Thema hoch.
@@ -106,18 +107,17 @@ python3 scripts/prepare_survey_imports.py --catalog ../ma_thesis_code/results/ll
 
 1. Teilnehmende importieren.
 2. Materialien importieren.
-3. Likert-Fragen und alle sieben Labels konfigurieren.
-4. Zuweisungen generieren.
-5. Validierungsfehler beheben.
-6. Studie in `Einstellungen` aktivieren.
-7. In `Links` persönliche Links kopieren oder als CSV exportieren.
-8. In `Ergebnisse` Fortschritt, Mittelwerte, Alpha und Antwort-CSV abrufen.
+3. Zuweisungen generieren.
+4. Validierungsfehler beheben.
+5. Studie in `Einstellungen` aktivieren.
+6. In `Links` persönliche Links kopieren oder als CSV exportieren.
+7. In `Ergebnisse` Fortschritt, Mittelwerte, Alpha und Antwort-CSV abrufen.
 
-Teilnehmende sehen Schreibauftrag, optionales Prompt-Bild und Essay als aufklappbaren Kontext, bewerten jeweils einen Feedbacktext und können über die Übersicht zu Aufgaben springen. Antworten speichern automatisch. Der Abschluss ist nur möglich, wenn Alter, Deutschkenntnisse und alle Ratings vollständig sind.
+Teilnehmende sehen pro Essay zuerst einen Leseschritt mit eingeklapptem Schreibauftrag und sichtbarem Essay. Danach bewerten sie die drei Feedbacktexte; Schreibauftrag und Essay bleiben dabei oben eingeklappt verfügbar. Antworten speichern automatisch. Der Abschluss ist nur möglich, wenn Alter, Deutschkenntnisse und alle Ratings vollständig sind.
 
 Im Adminbereich kannst du CSVs entweder in das Textfeld einfügen, per Dateiauswahl laden oder direkt auf die Drop-Zone ziehen. Geladene Dateien werden zuerst in das Textfeld übernommen, damit du sie vor dem Import noch prüfen oder korrigieren kannst.
 
-Der Schreibauftrag kommt aus der Materialspalte `prompt`. Das optionale Bild kann nach dem Materialimport im Adminbereich pro Thema hochgeladen werden. Das Generator-Skript füllt `prompt` aus `essays.essay_prompt` im Pipeline-Katalog und lässt `promptImageUrl` leer, damit keine lokalen Bildpfade vorausgesetzt werden. Beim Upload wird das Bild in Convex Storage gespeichert und den Teilnehmenden zusammen mit dem Essay im aufklappbaren Kontext angezeigt.
+Der Schreibauftrag kommt aus der Materialspalte `prompt`. Die Klassenstufe der Essays kommt aus `gradeLevel` und muss `5` oder `9` sein. Beim Generieren erhält jede Gruppe zufällig genau ein Thema und genau eine Klassenstufe; Gruppen bekommen nur Essays aus dieser Thema-Klassenstufe-Kombination. Das optionale Bild kann nach dem Materialimport im Adminbereich pro Thema hochgeladen werden. Das Generator-Skript füllt `prompt` aus `essays.essay_prompt` im Pipeline-Katalog und lässt `promptImageUrl` leer, damit keine lokalen Bildpfade vorausgesetzt werden. Beim Upload wird das Bild in Convex Storage gespeichert und den Teilnehmenden zusammen mit dem Essay im aufklappbaren Kontext angezeigt.
 
 ## Export
 

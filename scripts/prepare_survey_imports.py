@@ -3,7 +3,7 @@
 
 The generated materials CSV matches the admin import format:
 
-topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,essayText,methodKey,feedbackText
+topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText
 
 By default the script creates a study-sized sample with 6 essays per topic
 (3 essays for each of the 2 groups assigned to a topic), across the three
@@ -58,6 +58,15 @@ def normalize_topic_key(topic: str) -> str:
         .replace("ß", "ss")
         .replace(" ", "-")
     )
+
+
+def normalize_grade_level(grade_level: str) -> str:
+    grade = grade_level.strip().lower()
+    if grade.startswith("5"):
+        return "5"
+    if grade.startswith("9"):
+        return "9"
+    return grade_level.strip()
 
 
 def fetch_essays(connection: sqlite3.Connection) -> dict[int, Essay]:
@@ -168,6 +177,7 @@ def write_materials(path: Path, selected_essays: list[Essay], feedbacks: dict[st
                 "promptImageUrl",
                 "essayKey",
                 "essayTitle",
+                "gradeLevel",
                 "essayText",
                 "methodKey",
                 "feedbackText",
@@ -183,7 +193,8 @@ def write_materials(path: Path, selected_essays: list[Essay], feedbacks: dict[st
                         "prompt": essay.prompt,
                         "promptImageUrl": "",
                         "essayKey": str(essay.essay_id),
-                        "essayTitle": f"Essay {essay.essay_id} ({essay.grade_level})",
+                        "essayTitle": f"Essay {essay.essay_id}",
+                        "gradeLevel": normalize_grade_level(essay.grade_level),
                         "essayText": essay.text,
                         "methodKey": method_key,
                         "feedbackText": feedbacks[method_key][essay.essay_id],

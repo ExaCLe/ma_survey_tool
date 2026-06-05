@@ -86,7 +86,7 @@ Alle neuen CSS-Farben sollten als OKLCH definiert werden.
 ### Likert-Skala
 
 - Sieben Optionen als stabile segmentierte Auswahl.
-- Jede Option zeigt Zahl und konfiguriertes Label.
+- Jede Option zeigt Zahl und festes Kriterienlabel.
 - Auf Desktop in einer Zeile, auf Mobile als zweispaltiges Grid mit ausreichend Touch-Fläche.
 - Antwortänderungen zeigen einen kurzen gespeicherten Zustand, aber keinen Speichern-Button.
 
@@ -98,7 +98,8 @@ Alle neuen CSS-Farben sollten als OKLCH definiert werden.
 
 ## Participant UI
 
-- Schreibauftrag und Essay sind oben als aufklappbares Kontextpanel verfügbar.
+- Zwischen Essays gibt es einen Leseschritt: Schreibauftrag eingeklappt oben, Essay sichtbar im Hauptbereich.
+- Beim Bewerten sind Schreibauftrag und Essay oben als eingeklappte Kontextpanels verfügbar.
 - Fortschritt bleibt sichtbar: Gesamtfortschritt, Essays erledigt, aktuelle Feedbackposition.
 - Ein Übersichtsschirm erlaubt direkte Navigation zu offenen und erledigten Aufgaben.
 - Pro Schritt wird genau ein Feedbacktext mit allen Likert-Fragen bewertet.
@@ -109,7 +110,7 @@ Alle neuen CSS-Farben sollten als OKLCH definiert werden.
 
 - Dashboard zeigt Studie, Validierungsstatus, Gruppen, Teilnehmende, Essays, Antworten und Agreement.
 - Importansicht dokumentiert die erwarteten CSV-Spalten direkt neben den Uploadfeldern.
-- Fragenansicht erlaubt Key, Fragetext und sieben Labels pro Frage.
+- Bewertungsfragen sind fest hinterlegt und werden nicht im Adminbereich konfiguriert.
 - Materialansicht zeigt Themen, Essays, Feedbackmethoden und Reihenfolge.
 - Linkansicht zeigt echte Vornamen nur zur Verteilung; Export der Antworten bleibt pseudonym.
 - Ergebnisse zeigen Fortschritt, Mittelwerte und ordinales Krippendorffs Alpha.

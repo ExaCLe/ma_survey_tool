@@ -2,6 +2,50 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 const STUDY_KEY = "single-study";
+const FIXED_QUESTIONS = [
+  {
+    key: "spezifitaet",
+    text: "Wie spezifisch bezieht sich dieses Feedback auf genau diesen Essay?",
+    description:
+      "Beurteile, ob das Feedback konkrete Stellen, Inhalte oder Probleme aus dem Essay aufgreift, statt nur allgemein zu beschreiben, wie ein guter Essay aussehen sollte.",
+    labels: ["gar nicht spezifisch", "kaum spezifisch", "eher allgemein", "teils/teils", "eher spezifisch", "sehr spezifisch", "genau auf diesen Essay zugeschnitten"]
+  },
+  {
+    key: "handlungsorientierung",
+    text: "Wie gut zeigt das Feedback konkrete nächste Schritte für die Überarbeitung?",
+    description:
+      "Beurteile, ob du als Schüler:in klar erkennen würdest, was du als Nächstes ändern, ergänzen oder verbessern kannst.",
+    labels: ["gar nicht umsetzbar", "kaum umsetzbar", "eher vage", "teils/teils", "eher umsetzbar", "sehr umsetzbar", "ganz konkrete nächste Schritte"]
+  },
+  {
+    key: "priorisierung",
+    text: "Wie klar macht das Feedback, was bei der Überarbeitung als Erstes und eventuell danach als Zweites, Drittes usw. gemacht werden soll?",
+    description:
+      "Beurteile, ob klar wird, womit die Überarbeitung beginnen sollte und ob weitere Schritte sinnvoll geordnet sind.",
+    labels: ["sehr unklar", "unklar", "eher unklar", "teils/teils", "eher klar", "sehr klar", "klare nächste Schritte"]
+  },
+  {
+    key: "bewaeltigbarkeit",
+    text: "Wie gut bewältigbar ist dieses Feedback für eine:n Schüler:in der {grade}?",
+    description:
+      "Beurteile, ob Umfang, Sprache und Anzahl der Hinweise für die angegebene Klassenstufe gut zu bewältigen sind.",
+    labels: ["sehr überfordernd", "überfordernd", "eher überfordernd", "teils/teils", "eher bewältigbar", "gut bewältigbar", "sehr gut bewältigbar"]
+  },
+  {
+    key: "verstaendlichkeit",
+    text: "Wie verständlich ist dieses Feedback für eine:n Schüler:in der {grade}?",
+    description:
+      "Beurteile, ob die Formulierungen klar, altersangemessen und leicht nachzuvollziehen sind.",
+    labels: ["gar nicht verständlich", "kaum verständlich", "eher unverständlich", "teils/teils", "eher verständlich", "sehr verständlich", "vollständig verständlich"]
+  },
+  {
+    key: "gesamt_hilfreich",
+    text: "Wie hilfreich ist dieses Feedback insgesamt aus deiner Sicht als Schüler:in der {grade}?",
+    description:
+      "Beurteile abschließend den Gesamteindruck: Wie sehr würde dir dieses Feedback helfen, den Essay sinnvoll zu überarbeiten?",
+    labels: ["gar nicht hilfreich", "kaum hilfreich", "eher nicht hilfreich", "teils/teils", "eher hilfreich", "sehr hilfreich", "außerordentlich hilfreich"]
+  }
+];
 const TABLES = [
   "responses",
   "participantFeedbackOrders",
@@ -34,6 +78,13 @@ function slug(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function normalizeGradeLevel(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (/^(5|5\.|5th|grade 5|5th grade|klasse 5|5\. klasse)$/.test(raw)) return "5";
+  if (/^(9|9\.|9th|grade 9|9th grade|klasse 9|9\. klasse)$/.test(raw)) return "9";
+  return "";
 }
 
 function token() {
@@ -124,6 +175,42 @@ async function ensureSettings(ctx) {
   return await ctx.db.get(id);
 }
 
+async function ensureFixedQuestions(ctx) {
+  const responses = await collect(ctx, "responses");
+  const questions = (await collect(ctx, "questions")).sort((a, b) => a.order - b.order);
+  const matches =
+    questions.length === FIXED_QUESTIONS.length &&
+    questions.every((question, index) => {
+      const fixed = FIXED_QUESTIONS[index];
+      return (
+        question.key === fixed.key &&
+        question.text === fixed.text &&
+        question.description === fixed.description &&
+        question.labels.length === fixed.labels.length &&
+        question.labels.every((label, labelIndex) => label === fixed.labels[labelIndex])
+      );
+    });
+  if (matches) return questions;
+  if (responses.length > 0) {
+    throw new Error("Die festen Bewertungsfragen können nach Antworten nicht automatisch ersetzt werden.");
+  }
+  await clearTables(ctx, ["questions"]);
+  const inserted = [];
+  for (let index = 0; index < FIXED_QUESTIONS.length; index += 1) {
+    const question = FIXED_QUESTIONS[index];
+    const id = await ctx.db.insert("questions", {
+      key: question.key,
+      text: question.text,
+      description: question.description,
+      labels: question.labels,
+      order: index
+    });
+    const row = await ctx.db.get(id);
+    if (row) inserted.push(row);
+  }
+  return inserted;
+}
+
 async function clearTables(ctx, tables) {
   for (const table of tables) {
     const rows = await collect(ctx, table);
@@ -163,7 +250,7 @@ function validateData(data) {
   const errors = [];
   if (data.groups.length !== 6) errors.push("Es müssen genau 6 Gruppen angelegt sein.");
   if (data.topics.length !== 3) errors.push("Es müssen genau 3 Themen importiert sein.");
-  if (data.questions.length === 0) errors.push("Es muss mindestens eine Likert-Frage angelegt sein.");
+  if (data.questions.length !== FIXED_QUESTIONS.length) errors.push(`Es müssen genau ${FIXED_QUESTIONS.length} feste Bewertungsfragen angelegt sein.`);
 
   for (const question of data.questions) {
     if (question.labels.length !== 7) {
@@ -172,31 +259,51 @@ function validateData(data) {
   }
 
   const topicEssayCounts = new Map();
+  const topicGradeEssayCounts = new Map();
   for (const topic of data.topics) {
     const essays = data.essays.filter((essay) => essay.topicId === topic._id);
     topicEssayCounts.set(topic._id, essays.length);
     if (essays.length === 0) errors.push(`Thema ${topic.title} hat keine Essays.`);
-    if (essays.length % 2 !== 0) errors.push(`Thema ${topic.title} braucht eine gerade Anzahl Essays.`);
+    for (const gradeLevel of ["5", "9"]) {
+      const gradeEssays = essays.filter((essay) => normalizeGradeLevel(essay.gradeLevel) === gradeLevel);
+      topicGradeEssayCounts.set(`${topic._id}:${gradeLevel}`, gradeEssays.length);
+      if (gradeEssays.length === 0) errors.push(`Thema ${topic.title} braucht Essays für Klasse ${gradeLevel}.`);
+    }
   }
   const distinctCounts = new Set([...topicEssayCounts.values()]);
   if (distinctCounts.size > 1) errors.push("Alle Themen müssen gleich viele Essays haben.");
+  const distinctTopicGradeCounts = new Set([...topicGradeEssayCounts.values()]);
+  if (distinctTopicGradeCounts.size > 1) errors.push("Alle Thema-Klassenstufe-Kombinationen müssen gleich viele Essays haben.");
 
   for (const essay of data.essays) {
+    if (!normalizeGradeLevel(essay.gradeLevel)) errors.push(`Essay ${essay.key} benötigt eine Klassenstufe (5 oder 9).`);
     const count = data.feedbacks.filter((feedback) => feedback.essayId === essay._id).length;
     if (count !== 3) errors.push(`Essay ${essay.key} benötigt genau 3 Feedbacktexte.`);
   }
 
   const groupsByTopic = new Map();
+  const groupsByGrade = new Map();
   for (const group of data.groups) {
-    if (!group.topicId) {
+    const groupAssignments = data.assignments.filter((assignment) => assignment.groupId === group._id);
+    const gradeLevel = normalizeGradeLevel(group.gradeLevel);
+    if (groupAssignments.length > 0 && !gradeLevel) errors.push(`Gruppe ${group.name} benötigt eine Klassenstufe (5 oder 9).`);
+    if (gradeLevel) groupsByGrade.set(gradeLevel, (groupsByGrade.get(gradeLevel) || 0) + 1);
+    if (groupAssignments.length > 0 && !group.topicId) {
       errors.push(`Gruppe ${group.name} ist keinem Thema zugeordnet.`);
       continue;
     }
-    groupsByTopic.set(group.topicId, (groupsByTopic.get(group.topicId) || 0) + 1);
+    if (group.topicId) groupsByTopic.set(group.topicId, (groupsByTopic.get(group.topicId) || 0) + 1);
   }
-  for (const topic of data.topics) {
-    if ((groupsByTopic.get(topic._id) || 0) !== 2) {
-      errors.push(`Thema ${topic.title} muss genau 2 Gruppen haben.`);
+  if (data.assignments.length > 0) {
+    for (const topic of data.topics) {
+      if ((groupsByTopic.get(topic._id) || 0) !== 2) {
+        errors.push(`Thema ${topic.title} muss genau 2 Gruppen haben.`);
+      }
+    }
+    for (const gradeLevel of ["5", "9"]) {
+      if ((groupsByGrade.get(gradeLevel) || 0) !== data.topics.length) {
+        errors.push(`Klasse ${gradeLevel} braucht genau ${data.topics.length} Gruppen.`);
+      }
     }
   }
 
@@ -205,6 +312,12 @@ function validateData(data) {
     if (groupParticipants.length === 0) errors.push(`Gruppe ${group.name} hat keine Teilnehmenden.`);
     const groupAssignments = data.assignments.filter((assignment) => assignment.groupId === group._id);
     if (groupAssignments.length === 0) errors.push(`Gruppe ${group.name} hat keine Essays.`);
+    for (const assignment of groupAssignments) {
+      const essay = data.essays.find((item) => item._id === assignment.essayId);
+      if (essay && normalizeGradeLevel(essay.gradeLevel) !== normalizeGradeLevel(group.gradeLevel)) {
+        errors.push(`Gruppe ${group.name} enthält Essay ${essay.key} aus einer anderen Klassenstufe.`);
+      }
+    }
   }
 
   return errors;
@@ -371,6 +484,7 @@ export const importParticipantGroups = mutation({
     if (responses.length > 0) throw new Error("Teilnehmende können nach Antworten nicht ersetzt werden.");
     await clearTables(ctx, ["participantFeedbackOrders", "participants", "groups", "groupEssayAssignments"]);
     await ensureSettings(ctx);
+    await ensureFixedQuestions(ctx);
 
     for (let groupIndex = 0; groupIndex < args.groups.length; groupIndex += 1) {
       const groupInput = args.groups[groupIndex];
@@ -411,6 +525,7 @@ export const importMaterials = mutation({
         promptImageUrl: v.optional(v.string()),
         essayKey: v.string(),
         essayTitle: v.string(),
+        gradeLevel: v.optional(v.string()),
         essayText: v.string(),
         methodKey: v.string(),
         feedbackText: v.string()
@@ -423,9 +538,11 @@ export const importMaterials = mutation({
     if (responses.length > 0) throw new Error("Materialien können nach Antworten nicht ersetzt werden.");
     await clearTables(ctx, ["participantFeedbackOrders", "groupEssayAssignments", "feedbacks", "essays", "topics"]);
     await ensureSettings(ctx);
+    await ensureFixedQuestions(ctx);
 
     const topicIds = new Map();
     const essayIds = new Map();
+    const essayGrades = new Map();
     for (const row of args.rows) {
       const topicKey = slug(row.topicKey || row.topicTitle);
       if (!topicKey) continue;
@@ -444,11 +561,21 @@ export const importMaterials = mutation({
       const essayKey = slug(row.essayKey || row.essayTitle);
       const essayMapKey = `${topicKey}:${essayKey}`;
       let essayId = essayIds.get(essayMapKey);
+      const gradeLevel = normalizeGradeLevel(row.gradeLevel);
+      if (!gradeLevel) {
+        throw new Error(`Essay ${row.essayKey || row.essayTitle} benötigt gradeLevel 5 oder 9.`);
+      }
+      const existingGrade = essayGrades.get(essayMapKey);
+      if (existingGrade && existingGrade !== gradeLevel) {
+        throw new Error(`Essay ${row.essayKey || row.essayTitle} hat widersprüchliche gradeLevel-Werte.`);
+      }
+      essayGrades.set(essayMapKey, gradeLevel);
       if (!essayId) {
         essayId = await ctx.db.insert("essays", {
           topicId,
           key: essayKey,
           title: row.essayTitle || row.essayKey,
+          gradeLevel: gradeLevel || undefined,
           text: row.essayText,
           order: essayIds.size
         });
@@ -467,31 +594,11 @@ export const importMaterials = mutation({
   }
 });
 
-export const saveQuestions = mutation({
-  args: {
-    adminPassword: v.string(),
-    questions: v.array(
-      v.object({
-        key: v.string(),
-        text: v.string(),
-        labels: v.array(v.string())
-      })
-    )
-  },
+export const syncFixedQuestions = mutation({
+  args: { adminPassword: v.string() },
   handler: async (ctx, args) => {
     requireAdmin(args.adminPassword);
-    const responses = await collect(ctx, "responses");
-    if (responses.length > 0) throw new Error("Fragen können nach Antworten nicht ersetzt werden.");
-    await clearTables(ctx, ["questions"]);
-    for (let index = 0; index < args.questions.length; index += 1) {
-      const question = args.questions[index];
-      await ctx.db.insert("questions", {
-        key: slug(question.key) || `q${index + 1}`,
-        text: question.text,
-        labels: question.labels,
-        order: index
-      });
-    }
+    await ensureFixedQuestions(ctx);
     return { ok: true };
   }
 });
@@ -500,6 +607,7 @@ export const generateAssignments = mutation({
   args: { adminPassword: v.string() },
   handler: async (ctx, args) => {
     requireAdmin(args.adminPassword);
+    await ensureFixedQuestions(ctx);
     const data = await getStudyData(ctx);
     const responses = await collect(ctx, "responses");
     if (responses.length > 0) throw new Error("Zuweisungen können nach Antworten nicht neu generiert werden.");
@@ -507,24 +615,38 @@ export const generateAssignments = mutation({
 
     const topics = shuffle(data.topics);
     const groups = shuffle(data.groups);
+    const gradeLevels = ["5", "9"];
     if (topics.length !== 3 || groups.length !== 6) {
       throw new Error(
         `Für die Randomisierung werden genau 3 Themen und 6 Gruppen benötigt. Aktuell gefunden: ${topics.length} Themen und ${groups.length} Gruppen. Importiere zuerst Materialien und Teilnehmende.`
       );
     }
+    const topicGradeCounts = [];
+    for (const topic of topics) {
+      for (const gradeLevel of gradeLevels) {
+        const count = data.essays.filter((essay) => essay.topicId === topic._id && normalizeGradeLevel(essay.gradeLevel) === gradeLevel).length;
+        if (count === 0) throw new Error(`Thema ${topic.title} braucht Essays für Klasse ${gradeLevel}.`);
+        topicGradeCounts.push(count);
+      }
+    }
+    if (new Set(topicGradeCounts).size > 1) {
+      throw new Error("Alle Thema-Klassenstufe-Kombinationen müssen gleich viele Essays haben.");
+    }
 
     for (let topicIndex = 0; topicIndex < topics.length; topicIndex += 1) {
       const topic = topics[topicIndex];
       const topicGroups = groups.slice(topicIndex * 2, topicIndex * 2 + 2);
-      const topicEssays = shuffle(data.essays.filter((essay) => essay.topicId === topic._id));
-      if (topicEssays.length % 2 !== 0) {
-        throw new Error(`Thema ${topic.title} braucht eine gerade Anzahl Essays.`);
-      }
-      const split = topicEssays.length / 2;
+      const topicGrades = shuffle(gradeLevels);
       for (let groupIndex = 0; groupIndex < topicGroups.length; groupIndex += 1) {
         const group = topicGroups[groupIndex];
-        await ctx.db.patch(group._id, { topicId: topic._id });
-        const essaysForGroup = topicEssays.slice(groupIndex * split, groupIndex * split + split);
+        const gradeLevel = topicGrades[groupIndex];
+        const essaysForGroup = shuffle(
+          data.essays.filter((essay) => essay.topicId === topic._id && normalizeGradeLevel(essay.gradeLevel) === gradeLevel)
+        );
+        if (essaysForGroup.length === 0) {
+          throw new Error(`Thema ${topic.title} braucht Essays für Klasse ${gradeLevel}.`);
+        }
+        await ctx.db.patch(group._id, { topicId: topic._id, gradeLevel });
         for (let essayIndex = 0; essayIndex < essaysForGroup.length; essayIndex += 1) {
           await ctx.db.insert("groupEssayAssignments", {
             groupId: group._id,
@@ -556,6 +678,7 @@ export const setStudyStatus = mutation({
   },
   handler: async (ctx, args) => {
     requireAdmin(args.adminPassword);
+    await ensureFixedQuestions(ctx);
     const data = await getStudyData(ctx, { ensureSettings: true });
     if (args.status === "active") {
       const errors = validateData(data);
@@ -644,6 +767,7 @@ export const resetStudy = mutation({
     requireAdmin(args.adminPassword);
     await clearTables(ctx, TABLES);
     await ensureSettings(ctx);
+    await ensureFixedQuestions(ctx);
     return { ok: true };
   }
 });
