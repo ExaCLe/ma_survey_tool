@@ -10,6 +10,9 @@ function responseKey(essayId, feedbackId, questionId) {
   return `${essayId}:${feedbackId}:${questionId}`;
 }
 
+const NETWORK_WARNING_MS = 4500;
+const SLOW_SAVE_MESSAGE = "Die Verbindung ist langsam. Deine Auswahl bleibt markiert, wird aber noch gespeichert.";
+
 const criteria = [
   {
     key: "verstaendlichkeit",
@@ -228,7 +231,9 @@ export default function ParticipantSurvey({ token }) {
   const [germanProficiency, setGermanProficiency] = useState("");
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
+  const [optimisticResponses, setOptimisticResponses] = useState(() => new Map());
   const initialVisibilityResolved = useRef(false);
+  const responseSaveVersions = useRef(new Map());
 
   useEffect(() => {
     if (survey?.kind === "survey") {
@@ -321,8 +326,11 @@ export default function ParticipantSurvey({ token }) {
     for (const response of survey.responses) {
       map.set(responseKey(response.essayId, response.feedbackId, response.questionId), response.value);
     }
+    for (const [key, value] of optimisticResponses.entries()) {
+      map.set(key, value);
+    }
     return map;
-  }, [survey]);
+  }, [survey, optimisticResponses]);
 
   if (survey === undefined) {
     return (
@@ -346,7 +354,7 @@ export default function ParticipantSurvey({ token }) {
   const totalTasks = essays.reduce((sum, item) => sum + item.feedbacks.length, 0);
   const currentTaskNumber = essays.slice(0, activeEssay).reduce((sum, item) => sum + item.feedbacks.length, 0) + activeFeedback + 1;
   const required = survey.completion.required;
-  const answered = survey.responses.length;
+  const answered = responseMap.size;
   const demographicsComplete = Boolean(age && germanProficiency);
   const canComplete = demographicsComplete && required > 0 && answered >= required;
   const alreadyStarted = Boolean(survey.participant.startedAt);
@@ -411,10 +419,37 @@ export default function ParticipantSurvey({ token }) {
     scrollToSurveyTop();
   }
 
+  async function waitForConvex(promise, slowMessage = SLOW_SAVE_MESSAGE) {
+    let didWarn = false;
+    const warningTimer = window.setTimeout(() => {
+      didWarn = true;
+      setError(slowMessage);
+    }, NETWORK_WARNING_MS);
+    try {
+      const result = await promise;
+      window.clearTimeout(warningTimer);
+      if (didWarn) {
+        setError((current) => (current === slowMessage ? "" : current));
+      }
+      return result;
+    } catch (err) {
+      window.clearTimeout(warningTimer);
+      setError("Speichern fehlgeschlagen. Bitte prüfe deine Internetverbindung und versuche es erneut.");
+      throw err;
+    }
+  }
+
   async function persistDemographics(nextAge = age, nextGerman = germanProficiency) {
-    setSaving("Demografie gespeichert");
-    await saveDemographics({ token, age: nextAge, germanProficiency: nextGerman });
-    window.setTimeout(() => setSaving(""), 1100);
+    setSaving("Speichert...");
+    try {
+      await waitForConvex(saveDemographics({ token, age: nextAge, germanProficiency: nextGerman }));
+      setSaving("Gespeichert");
+      window.setTimeout(() => setSaving(""), 900);
+      return true;
+    } catch {
+      setSaving("");
+      return false;
+    }
   }
 
   async function beginSurvey() {
@@ -423,27 +458,54 @@ export default function ParticipantSurvey({ token }) {
       setError("Bitte Alter und Deutschkenntnisse ausfüllen.");
       return;
     }
-    await persistDemographics(age, germanProficiency);
-    await startParticipant({ token });
+    const demographicsSaved = await persistDemographics(age, germanProficiency);
+    if (!demographicsSaved) return;
+    await waitForConvex(startParticipant({ token }), "Die Verbindung ist langsam. Der Start wird noch gespeichert.");
     navigateToPrompt();
   }
 
   function nextIntroStep() {
     setError("");
-    setIntroStep((step) => Math.min(step + 1, introSteps.length - 1));
-    scrollToSurveyTop();
+    navigateToIntro(Math.min(introStep + 1, introSteps.length - 1));
   }
 
   function previousIntroStep() {
     setError("");
-    setIntroStep((step) => Math.max(step - 1, 0));
-    scrollToSurveyTop();
+    navigateToIntro(Math.max(introStep - 1, 0));
   }
 
   async function choose(questionId, value) {
-    setSaving("Antwort gespeichert");
-    await saveResponse({ token, essayId: essay._id, feedbackId: feedback._id, questionId, value });
-    window.setTimeout(() => setSaving(""), 900);
+    const key = responseKey(essay._id, feedback._id, questionId);
+    const previousValue = responseMap.get(key);
+    const version = (responseSaveVersions.current.get(key) || 0) + 1;
+    responseSaveVersions.current.set(key, version);
+    setError("");
+    setSaving("Speichert...");
+    setOptimisticResponses((previous) => {
+      const next = new Map(previous);
+      next.set(key, value);
+      return next;
+    });
+    try {
+      await waitForConvex(saveResponse({ token, essayId: essay._id, feedbackId: feedback._id, questionId, value }));
+      if (responseSaveVersions.current.get(key) === version) {
+        setSaving("Gespeichert");
+        window.setTimeout(() => setSaving(""), 900);
+      }
+    } catch {
+      if (responseSaveVersions.current.get(key) === version) {
+        setOptimisticResponses((previous) => {
+          const next = new Map(previous);
+          if (previousValue === undefined) {
+            next.delete(key);
+          } else {
+            next.set(key, previousValue);
+          }
+          return next;
+        });
+        setSaving("");
+      }
+    }
   }
 
   function nextTask() {
@@ -476,7 +538,7 @@ export default function ParticipantSurvey({ token }) {
   async function finish() {
     setError("");
     try {
-      await completeParticipant({ token });
+      await waitForConvex(completeParticipant({ token }), "Die Verbindung ist langsam. Der Abschluss wird noch gespeichert.");
     } catch (err) {
       setError(err.message || "Abschluss nicht möglich.");
     }
@@ -710,10 +772,11 @@ export default function ParticipantSurvey({ token }) {
             <div>
               <p className="eyebrow">Vor den Essays</p>
               <h2 className="page-title" style={{ fontSize: 28 }}>Schreibauftrag</h2>
-              <p className="page-subtitle">Dieser Auftrag ist die Grundlage für alle Essays, die du danach liest.</p>
+              <p className="page-subtitle">Diese Aufgabenstellung haben die Schüler erhalten, als sie den Aufsatz geschrieben haben:</p>
             </div>
             {saving && <span className="status-pill" aria-live="polite">{saving}</span>}
           </div>
+          {error && <div className="notice error" style={{ marginBottom: 16 }}>{error}</div>}
 
           <div className="essay-reading-panel">
             <PromptContext topic={survey.topic} />
@@ -738,6 +801,7 @@ export default function ParticipantSurvey({ token }) {
             </div>
             {saving && <span className="status-pill" aria-live="polite">{saving}</span>}
           </div>
+          {error && <div className="notice error" style={{ marginBottom: 16 }}>{error}</div>}
 
           <div className="context-panel">
             <ContextDisclosure title="Schreibauftrag">
@@ -772,6 +836,7 @@ export default function ParticipantSurvey({ token }) {
             </div>
             {saving && <span className="status-pill" aria-live="polite">{saving}</span>}
           </div>
+          {error && <div className="notice error" style={{ marginBottom: 16 }}>{error}</div>}
 
           <div className="context-panel">
             <ContextDisclosure title="Schreibauftrag">
