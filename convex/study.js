@@ -1,8 +1,17 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalAction, mutation, query } from "./_generated/server";
 
 const STUDY_KEY = "single-study";
+const DEFAULT_NOTIFICATION_EMAIL = "leon.biermann@gmx.net";
 const FIXED_QUESTIONS = [
+  {
+    key: "verstaendlichkeit",
+    text: "Wie verständlich ist dieses Feedback für eine:n Schüler:in der {grade}?",
+    description:
+      "Beurteile, ob die Formulierungen klar, altersangemessen und leicht nachzuvollziehen sind.",
+    labels: ["gar nicht verständlich", "kaum verständlich", "eher unverständlich", "teils/teils", "eher verständlich", "sehr verständlich", "vollständig verständlich"]
+  },
   {
     key: "spezifitaet",
     text: "Wie spezifisch bezieht sich dieses Feedback auf genau diesen Essay?",
@@ -30,13 +39,6 @@ const FIXED_QUESTIONS = [
     description:
       "Beurteile, ob Umfang, Sprache und Anzahl der Hinweise für die angegebene Klassenstufe gut zu bewältigen sind.",
     labels: ["sehr überfordernd", "überfordernd", "eher überfordernd", "teils/teils", "eher bewältigbar", "gut bewältigbar", "sehr gut bewältigbar"]
-  },
-  {
-    key: "verstaendlichkeit",
-    text: "Wie verständlich ist dieses Feedback für eine:n Schüler:in der {grade}?",
-    description:
-      "Beurteile, ob die Formulierungen klar, altersangemessen und leicht nachzuvollziehen sind.",
-    labels: ["gar nicht verständlich", "kaum verständlich", "eher unverständlich", "teils/teils", "eher verständlich", "sehr verständlich", "vollständig verständlich"]
   },
   {
     key: "gesamt_hilfreich",
@@ -69,6 +71,75 @@ function requireAdmin(adminPassword) {
 function now() {
   return Date.now();
 }
+
+function formatNotificationDate(timestamp) {
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Berlin"
+  }).format(new Date(timestamp));
+}
+
+function notificationSubject(event, participantCode) {
+  const eventLabel = event === "started" ? "Survey gestartet" : "Survey abgeschlossen";
+  return `${eventLabel}: ${participantCode}`;
+}
+
+function notificationText(args) {
+  const eventLabel = args.event === "started" ? "gestartet" : "abgeschlossen";
+  return [
+    `Ein Survey wurde ${eventLabel}.`,
+    "",
+    `Zeitpunkt: ${formatNotificationDate(args.at)}`,
+    `Teilnehmer-Code: ${args.participantCode}`,
+    `Pseudonym: ${args.participantPseudonym}`,
+    `Gruppe: ${args.groupKey || "-"}`,
+    `Thema: ${args.topicTitle || "-"}`,
+    `Klasse: ${args.gradeLevel ? `${args.gradeLevel}. Klasse` : "-"}`
+  ].join("\n");
+}
+
+export const sendSurveyLifecycleEmail = internalAction({
+  args: {
+    event: v.union(v.literal("started"), v.literal("completed")),
+    participantCode: v.string(),
+    participantPseudonym: v.string(),
+    groupKey: v.optional(v.string()),
+    topicTitle: v.optional(v.string()),
+    gradeLevel: v.optional(v.string()),
+    at: v.number()
+  },
+  handler: async (ctx, args) => {
+    void ctx;
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.EMAIL_FROM || process.env.RESEND_FROM;
+    const to = process.env.SURVEY_NOTIFICATION_EMAIL || DEFAULT_NOTIFICATION_EMAIL;
+    if (!apiKey || !from) {
+      console.warn("Survey email notification skipped: RESEND_API_KEY and EMAIL_FROM/RESEND_FROM are required.");
+      return { ok: false, skipped: true };
+    }
+
+    const response = await globalThis.fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to,
+        subject: notificationSubject(args.event, args.participantCode),
+        text: notificationText(args)
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Survey email notification failed", response.status, await response.text());
+      return { ok: false, skipped: false };
+    }
+    return { ok: true };
+  }
+});
 
 function slug(value) {
   return String(value || "")
@@ -244,6 +315,20 @@ async function resolveTopicPromptImage(ctx, topic) {
 
 async function resolveTopicPromptImages(ctx, topics) {
   return await Promise.all(topics.map((topic) => resolveTopicPromptImage(ctx, topic)));
+}
+
+async function scheduleSurveyLifecycleEmail(ctx, event, participant, at) {
+  const group = await ctx.db.get(participant.groupId);
+  const topic = group?.topicId ? await ctx.db.get(group.topicId) : null;
+  await ctx.scheduler.runAfter(0, internal.study.sendSurveyLifecycleEmail, {
+    event,
+    participantCode: participant.code,
+    participantPseudonym: participant.pseudonym,
+    groupKey: group?.key || undefined,
+    topicTitle: topic?.title || undefined,
+    gradeLevel: group?.gradeLevel || undefined,
+    at
+  });
 }
 
 function validateData(data) {
@@ -845,7 +930,9 @@ export const startParticipant = mutation({
     const settings = await ensureSettings(ctx);
     if (!participant || settings.status !== "active" || participant.status === "completed") return { ok: false };
     if (!participant.startedAt) {
-      await ctx.db.patch(participant._id, { startedAt: now(), status: "started", updatedAt: now() });
+      const startedAt = now();
+      await ctx.db.patch(participant._id, { startedAt, status: "started", updatedAt: startedAt });
+      await scheduleSurveyLifecycleEmail(ctx, "started", participant, startedAt);
     }
     const assignments = await ctx.db
       .query("groupEssayAssignments")
@@ -947,11 +1034,13 @@ export const completeParticipant = mutation({
     if (answered < required) {
       throw new Error("Es sind noch nicht alle Bewertungen vollständig.");
     }
+    const completedAt = now();
     await ctx.db.patch(participant._id, {
       status: "completed",
-      completedAt: now(),
-      updatedAt: now()
+      completedAt,
+      updatedAt: completedAt
     });
+    await scheduleSurveyLifecycleEmail(ctx, "completed", participant, completedAt);
     return { ok: true };
   }
 });

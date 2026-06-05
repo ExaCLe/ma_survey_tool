@@ -22,7 +22,7 @@ product
 - Es gibt drei Themen und sechs Gruppen; je zwei Gruppen werden einem Thema zugeordnet.
 - Essays werden pro Thema gleichmäßig und ohne Überlappung auf die zwei Gruppen verteilt.
 - Jeder Essay hat genau drei Feedbacktexte, deren Methodenidentität für Teilnehmende verborgen bleibt.
-- Die Bewertungsfragen sind fest in der App hinterlegt: Spezifität, Handlungsorientierung, Priorisierung, Bewältigbarkeit, Verständlichkeit und Gesamt.
+- Die Bewertungsfragen sind fest in der App hinterlegt: Verständlichkeit, Spezifität, Handlungsorientierung, Priorisierung, Bewältigbarkeit und Gesamt.
 - Feedbackreihenfolgen werden im Entwurf randomisiert, können vor Aktivierung manuell sortiert werden und werden für Teilnehmende beim Start eingefroren.
 - Antworten werden automatisch gespeichert; der Abschluss ist explizit und streng validiert.
 - Nach Abschluss sehen Teilnehmende nur noch eine Abschlussseite.

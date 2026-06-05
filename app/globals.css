@@ -717,6 +717,24 @@ a {
   background: var(--surface-muted);
   padding: 10px;
   color: var(--muted);
+  font: inherit;
+  text-align: left;
+}
+
+button.intro-progress-step {
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+button.intro-progress-step:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+button.intro-progress-step:focus-visible {
+  outline: 3px solid oklch(0.74 0.14 279 / 0.35);
+  outline-offset: 2px;
 }
 
 .intro-progress-step span {
@@ -781,6 +799,10 @@ a {
   justify-content: space-between;
   gap: 10px;
   margin-top: 22px;
+}
+
+.intro-actions .btn {
+  min-width: 0;
 }
 
 .participant-nav-toggle {
@@ -1330,7 +1352,50 @@ a {
   }
 
   .intro-progress {
-    grid-template-columns: 1fr;
+    display: flex;
+    position: relative;
+    width: fit-content;
+    justify-content: center;
+    gap: 12px;
+    margin-right: auto;
+    margin-bottom: 22px;
+    margin-left: auto;
+  }
+
+  .intro-progress::before {
+    position: absolute;
+    top: 50%;
+    right: 17px;
+    left: 17px;
+    height: 1px;
+    background: var(--border);
+    content: "";
+    transform: translateY(-50%);
+  }
+
+  .intro-progress-step {
+    position: relative;
+    z-index: 1;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0;
+  }
+
+  .intro-progress-step span {
+    width: 100%;
+    height: 100%;
+  }
+
+  .intro-progress-step strong {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .participant-layout {
@@ -1387,6 +1452,16 @@ a {
 
   .intro-actions {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .intro-actions .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 10px;
+    line-height: 1.2;
+    white-space: normal;
   }
 
   .page-title {

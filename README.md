@@ -22,6 +22,14 @@ In Convex muss dasselbe Passwort als Environment Variable gesetzt werden:
 npx convex env set ADMIN_PASSWORD ein-langes-passwort
 ```
 
+Optional: Für E-Mail-Benachrichtigungen bei Start und Abschluss eines Surveys setze Resend-Zugangsdaten in Convex. Ohne diese Variablen läuft die Studie weiter, aber es werden keine E-Mails verschickt.
+
+```bash
+npx convex env set RESEND_API_KEY re_...
+npx convex env set EMAIL_FROM "SurveyAnnotate <notifications@deine-domain.de>"
+npx convex env set SURVEY_NOTIFICATION_EMAIL leon.biermann@gmx.net
+```
+
 Dann die Next-App starten:
 
 ```bash
@@ -136,10 +144,13 @@ Empfohlen ist ein gemeinsamer Vercel-Build, der Convex-Funktionen und Next.js-Fr
 ### Convex vorbereiten
 
 1. In Convex eine Production Deployment anlegen.
-2. In der Convex Production Deployment `ADMIN_PASSWORD` setzen:
+2. In der Convex Production Deployment `ADMIN_PASSWORD` und optional die E-Mail-Variablen setzen:
 
 ```bash
 npx convex env set --prod ADMIN_PASSWORD
+npx convex env set --prod RESEND_API_KEY
+npx convex env set --prod EMAIL_FROM
+npx convex env set --prod SURVEY_NOTIFICATION_EMAIL
 ```
 
 3. In Convex für die Production Deployment einen Production Deploy Key erzeugen.

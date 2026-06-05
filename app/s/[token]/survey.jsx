@@ -12,6 +12,15 @@ function responseKey(essayId, feedbackId, questionId) {
 
 const criteria = [
   {
+    key: "verstaendlichkeit",
+    title: "Verständlichkeit",
+    text: "Ist das Feedback sprachlich klar und leicht nachzuvollziehen?",
+    strongLabel: "Sehr verständlich",
+    strongExample: "Die Sätze sind klar formuliert, nutzen passende Wörter und erklären genau, was gemeint ist.",
+    weakLabel: "Unverständlich",
+    weakExample: "Das Feedback nutzt unklare Begriffe oder verschachtelte Sätze, sodass nicht klar wird, was gemeint ist."
+  },
+  {
     key: "spezifitaet",
     title: "Spezifität",
     text: "Bezieht sich das Feedback konkret auf genau diesen Essay?",
@@ -46,15 +55,6 @@ const criteria = [
     strongExample: "Wenige klare Hinweise in einfacher Sprache, die zur Klassenstufe passen.",
     weakLabel: "Überfordernd",
     weakExample: "Viele lange Hinweise mit schwierigen Fachwörtern und zu vielen Aufgaben auf einmal."
-  },
-  {
-    key: "verstaendlichkeit",
-    title: "Verständlichkeit",
-    text: "Ist das Feedback sprachlich klar und leicht nachzuvollziehen?",
-    strongLabel: "Sehr verständlich",
-    strongExample: "Die Sätze sind klar formuliert, nutzen passende Wörter und erklären genau, was gemeint ist.",
-    weakLabel: "Unverständlich",
-    weakExample: "Das Feedback nutzt unklare Begriffe oder verschachtelte Sätze, sodass nicht klar wird, was gemeint ist."
   },
   {
     key: "gesamt_hilfreich",
@@ -126,15 +126,32 @@ function CriteriaList({ compact = false, detailed = false }) {
   );
 }
 
-function IntroProgress({ current }) {
+function IntroProgress({ current, onStepClick }) {
   return (
     <div className="intro-progress" aria-label="Einführungsschritte">
-      {introSteps.map((step, index) => (
-        <div className={`intro-progress-step ${index === current ? "active" : ""} ${index < current ? "done" : ""}`} key={step}>
-          <span>{index + 1}</span>
-          <strong>{step}</strong>
-        </div>
-      ))}
+      {introSteps.map((step, index) => {
+        const isDone = index < current;
+        const isActive = index === current;
+        const content = (
+          <>
+            <span>{index + 1}</span>
+            <strong>{step}</strong>
+          </>
+        );
+        const className = `intro-progress-step ${isActive ? "active" : ""} ${isDone ? "done" : ""}`;
+        if (isDone) {
+          return (
+            <button className={className} type="button" key={step} onClick={() => onStepClick(index)}>
+              {content}
+            </button>
+          );
+        }
+        return (
+          <div className={className} key={step} aria-current={isActive ? "step" : undefined}>
+            {content}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -477,7 +494,7 @@ export default function ParticipantSurvey({ token }) {
               Survey<span>Annotate</span>
             </span>
           </div>
-          <IntroProgress current={introStep} />
+          <IntroProgress current={introStep} onStepClick={navigateToIntro} />
 
           <div className="intro-step-content">
             {introStep === 0 && (
