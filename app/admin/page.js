@@ -68,6 +68,10 @@ function downloadFile(name, content, type = "text/csv;charset=utf-8") {
   URL.revokeObjectURL(url);
 }
 
+function promptImageSrc(value) {
+  return String(value || "").trim();
+}
+
 async function readCsvFile(event, setter) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -96,6 +100,24 @@ function CsvDropZone({ label, description, onLoad }) {
       </span>
       <input type="file" accept=".csv,text/csv" onChange={(event) => readCsvFile(event, onLoad)} />
     </label>
+  );
+}
+
+function PromptImagePreview({ src, title }) {
+  const [failed, setFailed] = useState(false);
+  const imageSrc = promptImageSrc(src);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [imageSrc]);
+
+  if (!imageSrc || failed) {
+    return <ImageIcon size={22} aria-hidden="true" />;
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={imageSrc} alt={`Promptbild ${title}`} onError={() => setFailed(true)} />
   );
 }
 
@@ -537,7 +559,7 @@ function MaterialsSection({ password, data, actions }) {
           <h2 className="panel-title">
             <ImageIcon size={19} /> Promptbilder
           </h2>
-          <span className="tag">{data.topics.filter((topic) => topic.promptImageUrl).length} / {data.topics.length} gesetzt</span>
+          <span className="tag">{data.topics.filter((topic) => promptImageSrc(topic.promptImageUrl)).length} / {data.topics.length} gesetzt</span>
         </div>
         <p className="muted">
           Lade pro Thema das Bild zum Schreibauftrag hoch. Die Datei wird in Convex gespeichert und in den Teilnehmendenlinks direkt ausgeliefert.
@@ -549,16 +571,11 @@ function MaterialsSection({ password, data, actions }) {
             {data.topics.map((topic) => (
               <div className="prompt-upload-row" key={topic._id}>
                 <div className="prompt-upload-preview">
-                  {topic.promptImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={topic.promptImageUrl} alt={`Promptbild ${topic.title}`} />
-                  ) : (
-                    <ImageIcon size={22} aria-hidden="true" />
-                  )}
+                  <PromptImagePreview src={topic.promptImageUrl} title={topic.title} />
                 </div>
                 <div className="prompt-upload-copy">
                   <strong>{topic.title}</strong>
-                  <span className="muted small">{topic.promptImageUrl ? "Bild gespeichert" : "Noch kein Bild gespeichert"}</span>
+                  <span className="muted small">{promptImageSrc(topic.promptImageUrl) ? "Bild gespeichert" : "Noch kein Bild gespeichert"}</span>
                 </div>
                 <div className="prompt-upload-actions">
                   <label className={`btn btn-secondary ${uploadingTopic === topic._id ? "disabled" : ""}`}>
@@ -575,7 +592,7 @@ function MaterialsSection({ password, data, actions }) {
                       }}
                     />
                   </label>
-                  {topic.promptImageUrl && (
+                  {promptImageSrc(topic.promptImageUrl) && (
                     <button
                       className="btn btn-ghost"
                       type="button"

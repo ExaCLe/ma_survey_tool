@@ -89,6 +89,10 @@ function formatQuestionText(text, gradeLabel) {
   return String(text || "").replaceAll("{grade}", gradeLabel);
 }
 
+function promptImageSrc(value) {
+  return String(value || "").trim();
+}
+
 function criterionTitleForQuestion(question) {
   const keyAliases = {
     nicht_ueberfordernd: "bewaeltigbarkeit",
@@ -159,15 +163,30 @@ function IntroProgress({ current, onStepClick }) {
   );
 }
 
+function SafePromptImage({ src, title }) {
+  const [failed, setFailed] = useState(false);
+  const imageSrc = promptImageSrc(src);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [imageSrc]);
+
+  if (!imageSrc || failed) {
+    return null;
+  }
+
+  return (
+    <div className="prompt-image">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={imageSrc} alt={`Bild zum Schreibauftrag ${title}`} onError={() => setFailed(true)} />
+    </div>
+  );
+}
+
 function PromptContext({ topic }) {
   return (
     <div className="prompt-context">
-      {topic?.promptImageUrl && (
-        <div className="prompt-image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={topic.promptImageUrl} alt={`Bild zum Schreibauftrag ${topic.title}`} />
-        </div>
-      )}
+      <SafePromptImage src={topic?.promptImageUrl} title={topic?.title || "Schreibauftrag"} />
       <div className="context-text">{topic?.prompt || "Kein Schreibauftrag vorhanden."}</div>
     </div>
   );

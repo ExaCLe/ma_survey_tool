@@ -34,7 +34,7 @@ Alle neuen CSS-Farben sollten als OKLCH definiert werden.
 
 ## Typografie
 
-- Schriftfamilie: `Inter`, `ui-sans-serif`, `system-ui`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `sans-serif`.
+- Schriftfamilie: `Aptos`, `ui-sans-serif`, `system-ui`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `sans-serif`.
 - Keine Display-Schrift.
 - Keine fluiden Schriftgrößen.
 - H1: 32px, 750, line-height 1.1.
