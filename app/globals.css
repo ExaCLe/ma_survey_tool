@@ -449,7 +449,7 @@ a {
 
 .result-filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
 }
@@ -749,12 +749,17 @@ a {
 .heat-table,
 .automatic-comparison-table,
 .ranking-comparison-table,
-.annotator-ranking-table {
+.annotator-ranking-table,
+.pairwise-detail-table {
   min-width: 860px;
 }
 
 .annotator-ranking-table {
   min-width: 720px;
+}
+
+.pairwise-detail-table {
+  min-width: 1040px;
 }
 
 .editable-results-table {
@@ -763,6 +768,49 @@ a {
 
 .editable-results-table td:nth-child(4) {
   max-width: 340px;
+}
+
+.correction-block-list {
+  display: grid;
+  gap: 20px;
+}
+
+.correction-block-head,
+.correction-feedback-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.correction-block-head {
+  margin-bottom: 10px;
+}
+
+.correction-feedback-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.correction-feedback-block {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.correction-feedback-block:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.correction-feedback-head .muted {
+  max-width: 920px;
+}
+
+.correction-feedback-table {
+  min-width: 680px;
 }
 
 .rating-edit-control {

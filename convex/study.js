@@ -57,6 +57,7 @@ const TABLES = [
   "groups",
   "feedbacks",
   "automaticMethodRankings",
+  "automaticPairwiseDetails",
   "essays",
   "topics",
   "questions",
@@ -301,10 +302,13 @@ async function getStudyData(ctx, options = {}) {
   const essays = await collect(ctx, "essays");
   const feedbacks = await collect(ctx, "feedbacks");
   const automaticRankings = (await collect(ctx, "automaticMethodRankings")).sort((a, b) => a.combinedRank - b.combinedRank);
+  const automaticPairwiseDetails = (await collect(ctx, "automaticPairwiseDetails")).sort(
+    (a, b) => a.essayKey.localeCompare(b.essayKey) || a.canonicalPairKey.localeCompare(b.canonicalPairKey)
+  );
   const questions = (await collect(ctx, "questions")).sort((a, b) => a.order - b.order);
   const assignments = await collect(ctx, "groupEssayAssignments");
   const responses = await collect(ctx, "responses");
-  return { settings, groups, participants, topics, essays, feedbacks, automaticRankings, questions, assignments, responses };
+  return { settings, groups, participants, topics, essays, feedbacks, automaticRankings, automaticPairwiseDetails, questions, assignments, responses };
 }
 
 async function resolveTopicPromptImage(ctx, topic) {
@@ -921,6 +925,183 @@ function humanRankingComparison(data) {
   };
 }
 
+function winnerForMeans(firstValue, secondValue, methodFirst, methodSecond) {
+  if (!Number.isFinite(firstValue) || !Number.isFinite(secondValue)) {
+    return { preferredMethodKey: null, winnerInCanonicalOrder: null };
+  }
+  if (firstValue > secondValue) {
+    return { preferredMethodKey: methodFirst, winnerInCanonicalOrder: "first" };
+  }
+  if (firstValue < secondValue) {
+    return { preferredMethodKey: methodSecond, winnerInCanonicalOrder: "second" };
+  }
+  return { preferredMethodKey: "tie", winnerInCanonicalOrder: "tie" };
+}
+
+function matchesPreference(humanWinner, automaticWinner) {
+  if (!humanWinner || !automaticWinner) return null;
+  return humanWinner === automaticWinner;
+}
+
+function pairwiseHumanVotesByEssay(data) {
+  const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
+  const questionById = new Map(data.questions.map((question) => [question._id, question]));
+  const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
+  const contexts = new Map();
+
+  for (const response of data.responses) {
+    const feedback = feedbackById.get(response.feedbackId);
+    const question = questionById.get(response.questionId);
+    const essay = essayById.get(response.essayId);
+    if (!feedback || !essay || question?.key !== OVERALL_HELPFULNESS_QUESTION_KEY || !Number.isFinite(response.value)) continue;
+    const contextKey = `${response.participantId}:${essay.key}`;
+    const context = contexts.get(contextKey) || {
+      essayKey: essay.key,
+      participantId: response.participantId,
+      methods: new Map()
+    };
+    context.methods.set(feedback.methodKey, response.value);
+    contexts.set(contextKey, context);
+  }
+
+  const pairRows = new Map();
+  for (const context of contexts.values()) {
+    const methodValues = [...context.methods.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    for (let i = 0; i < methodValues.length; i += 1) {
+      for (let j = i + 1; j < methodValues.length; j += 1) {
+        const [methodFirst, valueFirst] = methodValues[i];
+        const [methodSecond, valueSecond] = methodValues[j];
+        const key = `${context.essayKey}:${methodFirst}|${methodSecond}`;
+        const row = pairRows.get(key) || {
+          essayKey: context.essayKey,
+          canonicalPairKey: `${methodFirst}|${methodSecond}`,
+          methodFirst,
+          methodSecond,
+          valuesFirst: [],
+          valuesSecond: [],
+          humanVotesFirst: 0,
+          humanVotesSecond: 0,
+          humanTies: 0,
+          humanPairedCount: 0
+        };
+        row.valuesFirst.push(valueFirst);
+        row.valuesSecond.push(valueSecond);
+        row.humanPairedCount += 1;
+        if (valueFirst > valueSecond) {
+          row.humanVotesFirst += 1;
+        } else if (valueFirst < valueSecond) {
+          row.humanVotesSecond += 1;
+        } else {
+          row.humanTies += 1;
+        }
+        pairRows.set(key, row);
+      }
+    }
+  }
+
+  return pairRows;
+}
+
+function pairwiseDeepComparison(data) {
+  const humanPairs = pairwiseHumanVotesByEssay(data);
+  const rows = data.automaticPairwiseDetails.map((detail) => {
+    const human = humanPairs.get(`${detail.essayKey}:${detail.canonicalPairKey}`);
+    const humanMeanFirst = human?.valuesFirst?.length ? human.valuesFirst.reduce((sum, value) => sum + value, 0) / human.valuesFirst.length : null;
+    const humanMeanSecond = human?.valuesSecond?.length ? human.valuesSecond.reduce((sum, value) => sum + value, 0) / human.valuesSecond.length : null;
+    const humanMeanPreference = winnerForMeans(humanMeanFirst, humanMeanSecond, detail.methodFirst, detail.methodSecond);
+    const humanVotePreference =
+      human && human.humanVotesFirst > human.humanVotesSecond
+        ? { preferredMethodKey: detail.methodFirst, winnerInCanonicalOrder: "first" }
+        : human && human.humanVotesFirst < human.humanVotesSecond
+          ? { preferredMethodKey: detail.methodSecond, winnerInCanonicalOrder: "second" }
+          : human
+            ? { preferredMethodKey: "tie", winnerInCanonicalOrder: "tie" }
+            : { preferredMethodKey: null, winnerInCanonicalOrder: null };
+    return {
+      pairwiseDetailId: detail._id,
+      essayKey: detail.essayKey,
+      topic: detail.topic || "",
+      gradeLevel: detail.gradeLevel || "",
+      groupKey: detail.groupKey || "",
+      groupLabel: detail.groupLabel || "",
+      orderInGroup: detail.orderInGroup ?? null,
+      confirmed: detail.confirmed,
+      canonicalPairKey: detail.canonicalPairKey,
+      methodFirst: detail.methodFirst,
+      methodSecond: detail.methodSecond,
+      combinedRankFirst: detail.combinedRankFirst ?? null,
+      combinedAbilityFirst: detail.combinedAbilityFirst ?? null,
+      combinedRankSecond: detail.combinedRankSecond ?? null,
+      combinedAbilitySecond: detail.combinedAbilitySecond ?? null,
+      majorityPreferredMethodKey: detail.majorityPreferredMethodKey || null,
+      majorityWinnerInCanonicalOrder: detail.majorityWinnerInCanonicalOrder || null,
+      majorityVoteCount: detail.majorityVoteCount ?? null,
+      validJudgeVoteCount: detail.validJudgeVoteCount,
+      invalidJudgeVoteCount: detail.invalidJudgeVoteCount,
+      judgeUnanimous: detail.judgeUnanimous,
+      gemmaWinnerInCanonicalOrder: detail.gemmaWinnerInCanonicalOrder || null,
+      gemmaPreferredMethodKey: detail.gemmaPreferredMethodKey || null,
+      llamaWinnerInCanonicalOrder: detail.llamaWinnerInCanonicalOrder || null,
+      llamaPreferredMethodKey: detail.llamaPreferredMethodKey || null,
+      openaiWinnerInCanonicalOrder: detail.openaiWinnerInCanonicalOrder || null,
+      openaiPreferredMethodKey: detail.openaiPreferredMethodKey || null,
+      humanMeanFirst,
+      humanMeanSecond,
+      humanMeanPreferredMethodKey: humanMeanPreference.preferredMethodKey,
+      humanMeanWinnerInCanonicalOrder: humanMeanPreference.winnerInCanonicalOrder,
+      humanVotePreferredMethodKey: humanVotePreference.preferredMethodKey,
+      humanVoteWinnerInCanonicalOrder: humanVotePreference.winnerInCanonicalOrder,
+      humanVotesFirst: human?.humanVotesFirst || 0,
+      humanVotesSecond: human?.humanVotesSecond || 0,
+      humanTies: human?.humanTies || 0,
+      humanPairedCount: human?.humanPairedCount || 0,
+      humanMatchesMajority: matchesPreference(humanVotePreference.winnerInCanonicalOrder, detail.majorityWinnerInCanonicalOrder || null),
+      humanMatchesCombinedRank: matchesPreference(humanMeanPreference.winnerInCanonicalOrder, winnerForMeans(
+        detail.combinedAbilityFirst ?? null,
+        detail.combinedAbilitySecond ?? null,
+        detail.methodFirst,
+        detail.methodSecond
+      ).winnerInCanonicalOrder),
+      humanMatchesGemma: matchesPreference(humanVotePreference.winnerInCanonicalOrder, detail.gemmaWinnerInCanonicalOrder || null),
+      humanMatchesLlama: matchesPreference(humanVotePreference.winnerInCanonicalOrder, detail.llamaWinnerInCanonicalOrder || null),
+      humanMatchesOpenai: matchesPreference(humanVotePreference.winnerInCanonicalOrder, detail.openaiWinnerInCanonicalOrder || null)
+    };
+  });
+
+  const rowsWithHuman = rows.filter((row) => row.humanVoteWinnerInCanonicalOrder);
+  const countMatches = (field) => rowsWithHuman.filter((row) => row[field] === true).length;
+  const byEssay = [...new Map(rows.map((row) => [row.essayKey, row])).values()]
+    .map((essay) => {
+      const essayRows = rows.filter((row) => row.essayKey === essay.essayKey);
+      const withHuman = essayRows.filter((row) => row.humanVoteWinnerInCanonicalOrder);
+      return {
+        essayKey: essay.essayKey,
+        topic: essay.topic,
+        gradeLevel: essay.gradeLevel,
+        groupLabel: essay.groupLabel,
+        pairCount: essayRows.length,
+        humanPairCount: withHuman.length,
+        majorityMatches: withHuman.filter((row) => row.humanMatchesMajority === true).length,
+        unanimousCount: essayRows.filter((row) => row.judgeUnanimous).length,
+        rows: essayRows
+      };
+    })
+    .sort((a, b) => a.essayKey.localeCompare(b.essayKey));
+
+  return {
+    totalPairs: rows.length,
+    humanComparedPairs: rowsWithHuman.length,
+    majorityMatches: countMatches("humanMatchesMajority"),
+    combinedRankMatches: countMatches("humanMatchesCombinedRank"),
+    gemmaMatches: countMatches("humanMatchesGemma"),
+    llamaMatches: countMatches("humanMatchesLlama"),
+    openaiMatches: countMatches("humanMatchesOpenai"),
+    unanimousPairs: rows.filter((row) => row.judgeUnanimous).length,
+    disagreementRows: rowsWithHuman.filter((row) => row.humanMatchesMajority === false),
+    byEssay
+  };
+}
+
 function groupedRatingRows(data) {
   const feedbackById = new Map(data.feedbacks.map((feedback) => [feedback._id, feedback]));
   const essayById = new Map(data.essays.map((essay) => [essay._id, essay]));
@@ -1055,7 +1236,8 @@ function resultsAnalytics(data) {
     ratingDistributions,
     methodComparisons: methodComparisons(data),
     automaticRankingComparison: automaticRankingComparison(data),
-    humanRankingComparison: humanRankingComparison(data)
+    humanRankingComparison: humanRankingComparison(data),
+    pairwiseDeepComparison: pairwiseDeepComparison(data)
   };
 }
 
@@ -1084,7 +1266,9 @@ function editableResponseRows(data) {
         participantPseudonym: participant.pseudonym,
         participantCode: participant.code,
         participantStatus: participant.status,
+        groupId: participant.groupId,
         groupKey: group?.key || "",
+        groupName: group?.name || "",
         topicKey: topic?.key || "",
         topicTitle: topic?.title || "",
         essayId: essay._id,
@@ -1092,6 +1276,8 @@ function editableResponseRows(data) {
         essayTitle: essay.title,
         feedbackId: feedback._id,
         methodKey: feedback.methodKey,
+        feedbackText: feedback.text,
+        feedbackOrder: feedback.setupOrder,
         questionId: question._id,
         questionKey: question.key,
         questionText: question.text,
@@ -1104,8 +1290,9 @@ function editableResponseRows(data) {
       (a, b) =>
         a.participantCode.localeCompare(b.participantCode) ||
         a.essayKey.localeCompare(b.essayKey) ||
-        a.methodKey.localeCompare(b.methodKey) ||
-        a.questionOrder - b.questionOrder
+        a.questionOrder - b.questionOrder ||
+        a.feedbackOrder - b.feedbackOrder ||
+        a.methodKey.localeCompare(b.methodKey)
     );
 }
 
@@ -1196,6 +1383,7 @@ export const dashboard = query({
       essays: data.essays,
       feedbacks: data.feedbacks,
       automaticRankings: data.automaticRankings,
+      automaticPairwiseDetails: data.automaticPairwiseDetails,
       questions: data.questions,
       assignments: data.assignments,
       responseCount: data.responses.length,
@@ -1434,6 +1622,99 @@ export const importAutomaticRankings = mutation({
       mappedSurveyMethods: surveyMethodKeys.size,
       unmappedAutomaticApproaches: args.rows.length - surveyMethodKeys.size,
       missingSurveyMethodKeys: feedbackMethodKeys.filter((methodKey) => !surveyMethodKeys.has(methodKey))
+    };
+  }
+});
+
+export const importAutomaticPairwiseDetails = mutation({
+  args: {
+    adminPassword: v.string(),
+    rows: v.array(
+      v.object({
+        essayKey: v.string(),
+        topic: v.optional(v.string()),
+        gradeLevel: v.optional(v.string()),
+        groupKey: v.optional(v.string()),
+        groupLabel: v.optional(v.string()),
+        orderInGroup: v.optional(v.number()),
+        confirmed: v.boolean(),
+        canonicalPairKey: v.string(),
+        methodFirst: v.string(),
+        methodSecond: v.string(),
+        combinedRankFirst: v.optional(v.number()),
+        combinedAbilityFirst: v.optional(v.number()),
+        combinedRankSecond: v.optional(v.number()),
+        combinedAbilitySecond: v.optional(v.number()),
+        validJudgeVoteCount: v.number(),
+        invalidJudgeVoteCount: v.number(),
+        majorityPreferredMethodKey: v.optional(v.string()),
+        majorityWinnerInCanonicalOrder: v.optional(v.string()),
+        majorityVoteCount: v.optional(v.number()),
+        judgeUnanimous: v.boolean(),
+        gemmaWinnerInCanonicalOrder: v.optional(v.string()),
+        gemmaPreferredMethodKey: v.optional(v.string()),
+        gemmaRankFirst: v.optional(v.number()),
+        gemmaRankSecond: v.optional(v.number()),
+        llamaWinnerInCanonicalOrder: v.optional(v.string()),
+        llamaPreferredMethodKey: v.optional(v.string()),
+        llamaRankFirst: v.optional(v.number()),
+        llamaRankSecond: v.optional(v.number()),
+        openaiWinnerInCanonicalOrder: v.optional(v.string()),
+        openaiPreferredMethodKey: v.optional(v.string()),
+        openaiRankFirst: v.optional(v.number()),
+        openaiRankSecond: v.optional(v.number()),
+        importedHumanPreferredMethodKey: v.optional(v.string()),
+        importedHumanWinnerInCanonicalOrder: v.optional(v.string()),
+        importedHumanMeanFirst: v.optional(v.number()),
+        importedHumanMeanSecond: v.optional(v.number()),
+        importedHumanRankFirst: v.optional(v.number()),
+        importedHumanRankSecond: v.optional(v.number()),
+        importedHumanMatchesMajorityPreferredMethod: v.optional(v.boolean()),
+        importedHumanMatchesCombinedBradleyTerryOrder: v.optional(v.boolean()),
+        importedHumanNotes: v.optional(v.string())
+      })
+    )
+  },
+  handler: async (ctx, args) => {
+    requireAdmin(args.adminPassword);
+    if (args.rows.length === 0) {
+      throw new Error("Die Pairwise-Details-CSV enthält keine importierbaren Zeilen.");
+    }
+
+    const rowKeys = new Set();
+    for (const row of args.rows) {
+      const essayKey = row.essayKey.trim();
+      const canonicalPairKey = row.canonicalPairKey.trim();
+      if (!essayKey || !canonicalPairKey || !row.methodFirst.trim() || !row.methodSecond.trim()) {
+        throw new Error("Jede Pairwise-Details-Zeile benötigt essayKey, canonicalPairKey, methodFirst und methodSecond.");
+      }
+      const rowKey = `${essayKey}:${canonicalPairKey}`;
+      if (rowKeys.has(rowKey)) {
+        throw new Error(`Doppelte Pairwise-Details-Zeile: ${rowKey}`);
+      }
+      rowKeys.add(rowKey);
+    }
+
+    await clearTables(ctx, ["automaticPairwiseDetails"]);
+    const importedAt = now();
+    for (const row of args.rows) {
+      await ctx.db.insert("automaticPairwiseDetails", {
+        ...row,
+        essayKey: row.essayKey.trim(),
+        canonicalPairKey: row.canonicalPairKey.trim(),
+        methodFirst: row.methodFirst.trim(),
+        methodSecond: row.methodSecond.trim(),
+        importedAt
+      });
+    }
+
+    const essayKeys = new Set((await collect(ctx, "essays")).map((essay) => essay.key));
+    return {
+      ok: true,
+      importedRows: args.rows.length,
+      unmatchedEssayKeys: [...new Set(args.rows.map((row) => row.essayKey).filter((essayKey) => !essayKeys.has(essayKey)))].sort((a, b) =>
+        a.localeCompare(b)
+      )
     };
   }
 });

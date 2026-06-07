@@ -125,6 +125,12 @@ function isTruthyCsvFlag(value) {
   return raw === "1" || raw === "true" || raw === "yes" || raw === "ja";
 }
 
+function optionalCsvBoolean(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return undefined;
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "ja";
+}
+
 const automaticMetricFields = [
   ["combined_rank", "combinedRank", true],
   ["combined_ability", "combinedAbility", true],
@@ -172,6 +178,67 @@ function parseAutomaticRankingRows(csv) {
         rankingSourceModels: optionalString(row.rankingSourceModels)
       };
       for (const [csvKey, fieldKey, required] of automaticMetricFields) {
+        const value = required ? requiredNumber(row, csvKey) : optionalNumber(row[csvKey]);
+        if (Number.isFinite(value)) parsed[fieldKey] = value;
+      }
+      return Object.fromEntries(Object.entries(parsed).filter(([, value]) => value !== undefined));
+    })
+    .filter(Boolean);
+}
+
+const pairwiseDetailNumericFields = [
+  ["orderInGroup", "orderInGroup"],
+  ["combinedRankFirst", "combinedRankFirst"],
+  ["combinedAbilityFirst", "combinedAbilityFirst"],
+  ["combinedRankSecond", "combinedRankSecond"],
+  ["combinedAbilitySecond", "combinedAbilitySecond"],
+  ["validJudgeVoteCount", "validJudgeVoteCount", true],
+  ["invalidJudgeVoteCount", "invalidJudgeVoteCount", true],
+  ["majorityVoteCount", "majorityVoteCount"],
+  ["gemmaRankFirst", "gemmaRankFirst"],
+  ["gemmaRankSecond", "gemmaRankSecond"],
+  ["llamaRankFirst", "llamaRankFirst"],
+  ["llamaRankSecond", "llamaRankSecond"],
+  ["openaiRankFirst", "openaiRankFirst"],
+  ["openaiRankSecond", "openaiRankSecond"],
+  ["humanMeanFirst", "importedHumanMeanFirst"],
+  ["humanMeanSecond", "importedHumanMeanSecond"],
+  ["humanRankFirst", "importedHumanRankFirst"],
+  ["humanRankSecond", "importedHumanRankSecond"]
+];
+
+function parseAutomaticPairwiseDetailRows(csv) {
+  return parseCsv(csv)
+    .map((row) => {
+      const essayKey = String(row.essayKey || "").trim();
+      const canonicalPairKey = String(row.canonicalPairKey || "").trim();
+      if (!essayKey || !canonicalPairKey) return null;
+      const parsed = {
+        essayKey,
+        topic: optionalString(row.topic),
+        gradeLevel: optionalString(row.gradeLevel),
+        groupKey: optionalString(row.groupKey),
+        groupLabel: optionalString(row.groupLabel),
+        confirmed: isTruthyCsvFlag(row.confirmed),
+        canonicalPairKey,
+        methodFirst: String(row.methodFirst || "").trim(),
+        methodSecond: String(row.methodSecond || "").trim(),
+        majorityPreferredMethodKey: optionalString(row.majorityPreferredMethodKey),
+        majorityWinnerInCanonicalOrder: optionalString(row.majorityWinnerInCanonicalOrder),
+        judgeUnanimous: isTruthyCsvFlag(row.judgeUnanimous),
+        gemmaWinnerInCanonicalOrder: optionalString(row.gemmaWinnerInCanonicalOrder),
+        gemmaPreferredMethodKey: optionalString(row.gemmaPreferredMethodKey),
+        llamaWinnerInCanonicalOrder: optionalString(row.llamaWinnerInCanonicalOrder),
+        llamaPreferredMethodKey: optionalString(row.llamaPreferredMethodKey),
+        openaiWinnerInCanonicalOrder: optionalString(row.openaiWinnerInCanonicalOrder),
+        openaiPreferredMethodKey: optionalString(row.openaiPreferredMethodKey),
+        importedHumanPreferredMethodKey: optionalString(row.humanPreferredMethodKey),
+        importedHumanWinnerInCanonicalOrder: optionalString(row.humanWinnerInCanonicalOrder),
+        importedHumanMatchesMajorityPreferredMethod: optionalCsvBoolean(row.humanMatchesMajorityPreferredMethod),
+        importedHumanMatchesCombinedBradleyTerryOrder: optionalCsvBoolean(row.humanMatchesCombinedBradleyTerryOrder),
+        importedHumanNotes: optionalString(row.humanNotes)
+      };
+      for (const [csvKey, fieldKey, required] of pairwiseDetailNumericFields) {
         const value = required ? requiredNumber(row, csvKey) : optionalNumber(row[csvKey]);
         if (Number.isFinite(value)) parsed[fieldKey] = value;
       }
@@ -504,6 +571,7 @@ function ImportSection({ password, data, actions }) {
   const [participantCsv, setParticipantCsv] = useState("groupKey,firstName\nA,Anna\nA,Ben\nA,Cem\nB,Dana\nB,Emil\nB,Finn");
   const [materialCsv, setMaterialCsv] = useState("topicKey,topicTitle,prompt,promptImageUrl,essayKey,essayTitle,gradeLevel,essayText,methodKey,feedbackText\nargumentation,Argumentation,\"Schreibe einen argumentativen Essay.\",,essay-01,Essay 1,9,\"Essaytext...\",method-a,\"Feedbacktext...\"");
   const [automaticCsv, setAutomaticCsv] = useState("surveyMethodKey,autoApproachKey,displayName,isCurrentManualAnnotationMethod,materialFeedbackRows,combined_rank,combined_ability,combined_score,combined_wins,combined_losses,combined_ties,combined_comparisons,gemma_rank,gemma_ability,gemma_score,gemma_wins,gemma_losses,gemma_ties,gemma_comparisons,llama_rank,llama_ability,llama_score,llama_wins,llama_losses,llama_ties,llama_comparisons,openai_rank,openai_ability,openai_score,openai_wins,openai_losses,openai_ties,openai_comparisons,rankingGeneratedAt,rankingDescription,rankingSourceModels\nllama_single_issue_v1,single_issue_v1_v3,Llama Single Issue v1,1,36,5,0.0916,-2.3905,4464,2134,96,6598,5,0.0913,-2.3932,1562,644,28,2206,1,0.1583,-1.8435,1757,451,8,2208,6,0.0551,-2.8986,1145,1039,60,2184,2026-06-05T08:25:54,\"Final helpfulness ranking\",\"gemma,llama,openai\"");
+  const [pairwiseDetailsCsv, setPairwiseDetailsCsv] = useState("essayKey,topic,gradeLevel,groupKey,groupLabel,orderInGroup,confirmed,canonicalPairKey,methodFirst,methodSecond,combinedRankFirst,combinedAbilityFirst,combinedRankSecond,combinedAbilitySecond,validJudgeVoteCount,invalidJudgeVoteCount,majorityPreferredMethodKey,majorityWinnerInCanonicalOrder,majorityVoteCount,judgeUnanimous,gemmaWinnerInCanonicalOrder,gemmaPreferredMethodKey,gemmaRankFirst,gemmaRankSecond,llamaWinnerInCanonicalOrder,llamaPreferredMethodKey,llamaRankFirst,llamaRankSecond,openaiWinnerInCanonicalOrder,openaiPreferredMethodKey,openaiRankFirst,openaiRankSecond,humanPreferredMethodKey,humanWinnerInCanonicalOrder,humanMeanFirst,humanMeanSecond,humanRankFirst,humanRankSecond,humanMatchesMajorityPreferredMethod,humanMatchesCombinedBradleyTerryOrder,humanNotes\n25105,Anschaffung,5th grade,anschaffung_5th_grade,Anschaffung / 5th grade,4,1,llama_baseline_v1|llama_direct_no_issues,llama_baseline_v1,llama_direct_no_issues,3,0.069,2,0.203,3,0,llama_direct_no_issues,second,3,1,second,llama_direct_no_issues,3,2,second,llama_direct_no_issues,3,2,second,llama_direct_no_issues,3,2,,,,,,,,,");
   const [message, setMessage] = useState("");
   const automaticPreview = useMemo(() => {
     try {
@@ -522,6 +590,21 @@ function ImportSection({ password, data, actions }) {
       return { rows: [], mappedRows: [], unmappedRows: [], missingMethodKeys: [], error: error?.message || "CSV konnte nicht gelesen werden." };
     }
   }, [automaticCsv, data?.feedbacks]);
+  const pairwiseDetailsPreview = useMemo(() => {
+    try {
+      const rows = parseAutomaticPairwiseDetailRows(pairwiseDetailsCsv);
+      const essayKeys = new Set((data?.essays || []).map((essay) => essay.key));
+      return {
+        rows,
+        essayCount: new Set(rows.map((row) => row.essayKey)).size,
+        unmatchedEssayKeys: [...new Set(rows.map((row) => row.essayKey).filter((essayKey) => !essayKeys.has(essayKey)))].sort((a, b) => a.localeCompare(b)),
+        unanimousRows: rows.filter((row) => row.judgeUnanimous).length,
+        error: ""
+      };
+    } catch (error) {
+      return { rows: [], essayCount: 0, unmatchedEssayKeys: [], unanimousRows: 0, error: error?.message || "CSV konnte nicht gelesen werden." };
+    }
+  }, [pairwiseDetailsCsv, data?.essays]);
 
   async function importParticipants() {
     const rows = parseCsv(participantCsv);
@@ -569,6 +652,18 @@ function ImportSection({ password, data, actions }) {
     setMessage(
       `Automatische Rankings wurden importiert: ${result.importedRows} Zeilen, ${result.mappedSurveyMethods} gemappte Survey-Methoden.${missing}`
     );
+  }
+
+  async function importAutomaticPairwiseDetails() {
+    if (pairwiseDetailsPreview.error) {
+      throw new Error(pairwiseDetailsPreview.error);
+    }
+    const result = await actions.importAutomaticPairwiseDetails({
+      adminPassword: password,
+      rows: pairwiseDetailsPreview.rows
+    });
+    const missing = result.unmatchedEssayKeys?.length ? ` Nicht gematchte Essays: ${result.unmatchedEssayKeys.join(", ")}.` : "";
+    setMessage(`Pairwise-Details wurden importiert: ${result.importedRows} Zeilen.${missing}`);
   }
 
   return (
@@ -664,6 +759,57 @@ function ImportSection({ password, data, actions }) {
         )}
         <button className="btn btn-primary" type="button" style={{ marginTop: 12 }} disabled={Boolean(automaticPreview.error) || automaticPreview.rows.length === 0} onClick={importAutomaticRankings}>
           <Upload size={16} /> Automatische Rankings importieren
+        </button>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">
+            <ListChecks size={19} /> Pairwise-Details importieren
+          </h2>
+          <span className="tag">{data?.automaticPairwiseDetails?.length || 0} gespeichert</span>
+        </div>
+        <p className="muted">
+          Importiert die per Essay und Methodenpaar aggregierten Judge-Votes. Die Human-Seite wird in Ergebnisse live aus der Frage gesamt_hilfreich berechnet.
+        </p>
+        <div className="notice">
+          Pflichtspalten: <strong>essayKey</strong>, <strong>canonicalPairKey</strong>, <strong>methodFirst</strong>, <strong>methodSecond</strong>, <strong>validJudgeVoteCount</strong>, <strong>invalidJudgeVoteCount</strong>.
+        </div>
+        <CsvDropZone
+          label="Pairwise-Details-CSV hier ablegen oder auswählen"
+          description="Zum Beispiel survey_pairwise_human_comparison_details.csv aus dem Pairwise-Analyseordner."
+          onLoad={setPairwiseDetailsCsv}
+        />
+        <textarea className="textarea" style={{ marginTop: 14, minHeight: 220 }} value={pairwiseDetailsCsv} onChange={(event) => setPairwiseDetailsCsv(event.target.value)} />
+        {pairwiseDetailsPreview.error ? (
+          <div className="notice error" style={{ marginTop: 12 }}>{pairwiseDetailsPreview.error}</div>
+        ) : (
+          <div className="automatic-preview-grid" style={{ marginTop: 12 }}>
+            <div className="notice">
+              <strong>{pairwiseDetailsPreview.rows.length}</strong>
+              <span> Pairwise-Zeilen</span>
+            </div>
+            <div className="notice">
+              <strong>{pairwiseDetailsPreview.essayCount}</strong>
+              <span> Essays</span>
+            </div>
+            <div className="notice success">
+              <strong>{pairwiseDetailsPreview.unanimousRows}</strong>
+              <span> einstimmige Judge-Paare</span>
+            </div>
+            <div className={`notice ${pairwiseDetailsPreview.unmatchedEssayKeys.length ? "error" : "success"}`}>
+              <strong>{pairwiseDetailsPreview.unmatchedEssayKeys.length}</strong>
+              <span> Essays ohne Material-Match</span>
+            </div>
+          </div>
+        )}
+        {pairwiseDetailsPreview.unmatchedEssayKeys.length > 0 && (
+          <p className="small muted" style={{ marginTop: 10 }}>
+            Ohne Match: {pairwiseDetailsPreview.unmatchedEssayKeys.join(", ")}
+          </p>
+        )}
+        <button className="btn btn-primary" type="button" style={{ marginTop: 12 }} disabled={Boolean(pairwiseDetailsPreview.error) || pairwiseDetailsPreview.rows.length === 0} onClick={importAutomaticPairwiseDetails}>
+          <Upload size={16} /> Pairwise-Details importieren
         </button>
       </section>
     </div>
@@ -923,6 +1069,9 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
   const humanRankingComparison = analytics.humanRankingComparison || {};
   const humanOverallRows = humanRankingComparison.overallRows || [];
   const humanEssayRows = humanRankingComparison.essayRows || [];
+  const pairwiseDeepComparison = analytics.pairwiseDeepComparison || {};
+  const pairwiseEssayRows = pairwiseDeepComparison.byEssay || [];
+  const pairwiseDisagreementRows = pairwiseDeepComparison.disagreementRows || [];
   const methodKeys = methodStats.map((row) => row.methodKey);
   const methodQuestionByKey = new Map(methodQuestionStats.map((row) => [`${row.questionKey}:${row.methodKey}`, row]));
   const essayKeys = [...new Set(essayMethodStats.map((row) => row.essayKey))];
@@ -1057,6 +1206,62 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
       )
     ])
   ].join("\n");
+  const pairwiseDeepComparisonCsv = [
+    csvLine([
+      "essayKey",
+      "topic",
+      "gradeLevel",
+      "canonicalPairKey",
+      "methodFirst",
+      "methodSecond",
+      "humanVoteWinner",
+      "humanVotesFirst",
+      "humanVotesSecond",
+      "humanTies",
+      "humanMeanFirst",
+      "humanMeanSecond",
+      "majorityWinner",
+      "majorityPreferredMethodKey",
+      "judgeUnanimous",
+      "gemmaWinner",
+      "llamaWinner",
+      "openaiWinner",
+      "humanMatchesMajority",
+      "humanMatchesCombinedRank",
+      "humanMatchesGemma",
+      "humanMatchesLlama",
+      "humanMatchesOpenai"
+    ]),
+    ...pairwiseEssayRows.flatMap((essay) =>
+      essay.rows.map((row) =>
+        csvLine([
+          row.essayKey,
+          row.topic,
+          row.gradeLevel,
+          row.canonicalPairKey,
+          row.methodFirst,
+          row.methodSecond,
+          row.humanVoteWinnerInCanonicalOrder,
+          row.humanVotesFirst,
+          row.humanVotesSecond,
+          row.humanTies,
+          row.humanMeanFirst,
+          row.humanMeanSecond,
+          row.majorityWinnerInCanonicalOrder,
+          row.majorityPreferredMethodKey,
+          row.judgeUnanimous ? "1" : "0",
+          row.gemmaWinnerInCanonicalOrder,
+          row.llamaWinnerInCanonicalOrder,
+          row.openaiWinnerInCanonicalOrder,
+          row.humanMatchesMajority,
+          row.humanMatchesCombinedRank,
+          row.humanMatchesGemma,
+          row.humanMatchesLlama,
+          row.humanMatchesOpenai
+        ])
+      )
+    )
+  ].join("\n");
 
   return (
     <div className="content-grid">
@@ -1179,6 +1384,103 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
           </div>
         ) : (
           <div className="empty-state">Noch keine vollständigen Human-Rankings vorhanden.</div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2 className="panel-title">Pairwise Deep Dive</h2>
+          <div className="button-row">
+            <span className="tag">{pairwiseDeepComparison.humanComparedPairs || 0} / {pairwiseDeepComparison.totalPairs || 0} mit Human-Vote</span>
+            <button className="btn btn-secondary" type="button" onClick={() => downloadFile("pairwise-deep-comparison.csv", pairwiseDeepComparisonCsv)} disabled={!pairwiseEssayRows.length}>
+              <Download size={16} /> Pairwise exportieren
+            </button>
+          </div>
+        </div>
+        <p className="muted">
+          Vergleicht pro Essay und Methodenpaar die Human-Mehrheit aus gesamt_hilfreich mit Modell-Mehrheit, Combined-BT-Order und einzelnen Judge-Votes.
+        </p>
+        {pairwiseEssayRows.length ? (
+          <>
+            <div className="automatic-preview-grid" style={{ marginBottom: 14 }}>
+              <div className="notice">
+                <strong>{pairwiseDeepComparison.majorityMatches || 0}</strong>
+                <span> Human = Modell-Mehrheit</span>
+              </div>
+              <div className="notice">
+                <strong>{pairwiseDeepComparison.combinedRankMatches || 0}</strong>
+                <span> Human = Combined BT</span>
+              </div>
+              <div className="notice">
+                <strong>{pairwiseDeepComparison.unanimousPairs || 0}</strong>
+                <span> einstimmige Modellpaare</span>
+              </div>
+              <div className={pairwiseDisagreementRows.length ? "notice error" : "notice success"}>
+                <strong>{pairwiseDisagreementRows.length}</strong>
+                <span> Human/Mehrheit-Konflikte</span>
+              </div>
+            </div>
+            <div className="essay-ranking-list">
+              {pairwiseEssayRows.map((essay) => (
+                <details className="essay-ranking-item" key={`pairwise-${essay.essayKey}`}>
+                  <summary>
+                    <span>
+                      <strong>{essay.essayKey}</strong>
+                      <span className="muted small"> {essay.topic || essay.groupLabel}</span>
+                    </span>
+                    <span className="tag">{essay.majorityMatches} / {essay.humanPairCount} Matches</span>
+                  </summary>
+                  <div className="essay-ranking-content">
+                    <div className="table-wrap">
+                      <table className="table pairwise-detail-table">
+                        <thead>
+                          <tr>
+                            <th>Methodenpaar</th>
+                            <th className="numeric">Human Votes</th>
+                            <th>Human Gewinner</th>
+                            <th>Modell-Mehrheit</th>
+                            <th>Judges</th>
+                            <th className="numeric">Means</th>
+                            <th>Match</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {essay.rows.map((row) => (
+                            <tr key={`${row.essayKey}-${row.canonicalPairKey}`}>
+                              <td>
+                                <strong>{row.methodFirst}</strong>
+                                <span className="muted"> vs. </span>
+                                <strong>{row.methodSecond}</strong>
+                              </td>
+                              <td className="numeric">{row.humanVotesFirst} / {row.humanTies} / {row.humanVotesSecond}</td>
+                              <td>{row.humanVotePreferredMethodKey || "–"}</td>
+                              <td>
+                                <strong>{row.majorityPreferredMethodKey || "–"}</strong>
+                                <div className="muted small">{row.majorityVoteCount || 0} / {row.validJudgeVoteCount} Votes</div>
+                              </td>
+                              <td>
+                                <div className="muted small">Gemma: {row.gemmaPreferredMethodKey || "–"}</div>
+                                <div className="muted small">Llama: {row.llamaPreferredMethodKey || "–"}</div>
+                                <div className="muted small">OpenAI: {row.openaiPreferredMethodKey || "–"}</div>
+                              </td>
+                              <td className="numeric">{formatStat(row.humanMeanFirst)} / {formatStat(row.humanMeanSecond)}</td>
+                              <td>
+                                <span className={`status-pill ${row.humanMatchesMajority === true ? "good" : row.humanMatchesMajority === false ? "bad" : "warn"}`}>
+                                  {row.humanMatchesMajority === true ? "Match" : row.humanMatchesMajority === false ? "Konflikt" : "offen"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">Importiere zuerst die Pairwise-Details-CSV, dann erscheint hier der Deep Dive.</div>
         )}
       </section>
 
@@ -1542,6 +1844,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
 }
 
 function CorrectionSection({ password, data, updateResponse }) {
+  const [groupFilter, setGroupFilter] = useState("all");
   const [participantFilter, setParticipantFilter] = useState("all");
   const [questionFilter, setQuestionFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
@@ -1550,22 +1853,82 @@ function CorrectionSection({ password, data, updateResponse }) {
   const [pendingValue, setPendingValue] = useState(null);
   const [message, setMessage] = useState("");
   const rows = data.editableResponses || [];
+  const groupOptions = data.groups
+    .filter((group) => rows.some((row) => row.groupId === group._id))
+    .sort((a, b) => a.order - b.order);
   const participantOptions = data.participants
-    .filter((participant) => rows.some((row) => row.participantId === participant._id))
+    .filter((participant) => rows.some((row) => row.participantId === participant._id && (groupFilter === "all" || row.groupId === groupFilter)))
     .sort((a, b) => a.code.localeCompare(b.code));
   const questionOptions = [...new Map(rows.map((row) => [row.questionId, row])).values()].sort((a, b) => a.questionOrder - b.questionOrder);
   const methodOptions = [...new Set(rows.map((row) => row.methodKey))].sort((a, b) => a.localeCompare(b));
   const normalizedSearch = search.trim().toLowerCase();
   const filteredRows = rows.filter((row) => {
+    if (groupFilter !== "all" && row.groupId !== groupFilter) return false;
     if (participantFilter !== "all" && row.participantId !== participantFilter) return false;
     if (questionFilter !== "all" && row.questionId !== questionFilter) return false;
     if (methodFilter !== "all" && row.methodKey !== methodFilter) return false;
     if (!normalizedSearch) return true;
-    return [row.participantPseudonym, row.participantCode, row.groupKey, row.topicTitle, row.essayKey, row.essayTitle, row.methodKey, row.questionKey]
+    return [
+      row.participantPseudonym,
+      row.participantCode,
+      row.groupKey,
+      row.groupName,
+      row.topicTitle,
+      row.essayKey,
+      row.essayTitle,
+      row.methodKey,
+      row.feedbackText,
+      row.questionKey
+    ]
       .join(" ")
       .toLowerCase()
       .includes(normalizedSearch);
   });
+  const correctionBlocks = [];
+  const blockByKey = new Map();
+  const orderedRows = [...filteredRows].sort(
+    (a, b) =>
+      a.groupKey.localeCompare(b.groupKey) ||
+      a.essayKey.localeCompare(b.essayKey) ||
+      a.questionOrder - b.questionOrder ||
+      a.feedbackOrder - b.feedbackOrder ||
+      a.methodKey.localeCompare(b.methodKey) ||
+      a.participantCode.localeCompare(b.participantCode)
+  );
+  for (const row of orderedRows) {
+    const blockKey = `${row.groupId}:${row.essayId}:${row.questionId}`;
+    let block = blockByKey.get(blockKey);
+    if (!block) {
+      block = {
+        key: blockKey,
+        groupKey: row.groupKey,
+        groupName: row.groupName,
+        topicTitle: row.topicTitle,
+        essayKey: row.essayKey,
+        essayTitle: row.essayTitle,
+        questionKey: row.questionKey,
+        questionText: row.questionText,
+        responseCount: 0,
+        feedbackBlocks: [],
+        feedbackByKey: new Map()
+      };
+      blockByKey.set(blockKey, block);
+      correctionBlocks.push(block);
+    }
+    block.responseCount += 1;
+    let feedbackBlock = block.feedbackByKey.get(row.feedbackId);
+    if (!feedbackBlock) {
+      feedbackBlock = {
+        key: row.feedbackId,
+        methodKey: row.methodKey,
+        feedbackText: row.feedbackText,
+        rows: []
+      };
+      block.feedbackByKey.set(row.feedbackId, feedbackBlock);
+      block.feedbackBlocks.push(feedbackBlock);
+    }
+    feedbackBlock.rows.push(row);
+  }
 
   async function setValue(row, value) {
     if (row.value === value || pendingResponse) return;
@@ -1595,6 +1958,24 @@ function CorrectionSection({ password, data, updateResponse }) {
           Änderungen werden direkt in den gespeicherten Antworten übernommen und danach in Export und Auswertung neu berechnet.
         </p>
         <div className="result-filter-grid">
+          <label className="field-label">
+            Gruppe
+            <select
+              className="select"
+              value={groupFilter}
+              onChange={(event) => {
+                setGroupFilter(event.target.value);
+                setParticipantFilter("all");
+              }}
+            >
+              <option value="all">Alle</option>
+              {groupOptions.map((group) => (
+                <option key={group._id} value={group._id}>
+                  {group.key} · {group.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="field-label">
             Teilnehmer:in
             <select className="select" value={participantFilter} onChange={(event) => setParticipantFilter(event.target.value)}>
@@ -1634,66 +2015,83 @@ function CorrectionSection({ password, data, updateResponse }) {
         </div>
       </section>
 
-      <section className="panel">
-        {filteredRows.length ? (
-          <div className="table-wrap">
-            <table className="table editable-results-table">
-              <thead>
-                <tr>
-                  <th>Teilnehmer:in</th>
-                  <th>Essay</th>
-                  <th>Methode</th>
-                  <th>Kriterium</th>
-                  <th>Wert</th>
-                  <th>Aktualisiert</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => (
-                  <tr key={row.responseId}>
-                    <td>
-                      <strong>{row.participantPseudonym}</strong>
-                      <div className="muted small">
-                        {row.participantCode}{row.groupKey ? ` · Gruppe ${row.groupKey}` : ""} · {row.participantStatus}
+      {correctionBlocks.length ? (
+        <div className="correction-block-list">
+          {correctionBlocks.map((block) => (
+            <section className="panel correction-block" key={block.key}>
+              <div className="correction-block-head">
+                <div>
+                  <h2 className="panel-title">
+                    {block.essayKey} · {block.questionKey}
+                  </h2>
+                  <div className="muted small">
+                    Gruppe {block.groupKey || "–"} · {block.topicTitle || block.essayTitle}
+                  </div>
+                </div>
+                <span className="tag">{block.responseCount} / 9 Ratings</span>
+              </div>
+              <p className="muted">{block.questionText}</p>
+              <div className="correction-feedback-list">
+                {block.feedbackBlocks.map((feedbackBlock) => (
+                  <div className="correction-feedback-block" key={feedbackBlock.key}>
+                    <div className="correction-feedback-head">
+                      <div>
+                        <strong>{feedbackBlock.methodKey}</strong>
+                        <div className="muted small">{feedbackBlock.feedbackText}</div>
                       </div>
-                    </td>
-                    <td>
-                      <strong>{row.essayKey}</strong>
-                      <div className="muted small">{row.topicTitle || row.essayTitle}</div>
-                    </td>
-                    <td>
-                      <span className="tag">{row.methodKey}</span>
-                    </td>
-                    <td>
-                      <strong>{row.questionKey}</strong>
-                      <div className="muted small">{row.questionText}</div>
-                    </td>
-                    <td>
-                      <div className="rating-edit-control" role="group" aria-label={`Bewertung ${row.questionKey} ändern`}>
-                        {[1, 2, 3, 4, 5, 6, 7].map((value) => (
-                          <button
-                            className={row.value === value ? "selected" : ""}
-                            type="button"
-                            key={value}
-                            disabled={Boolean(pendingResponse)}
-                            onClick={() => setValue(row, value)}
-                            title={row.questionLabels?.[value - 1] || `Wert ${value}`}
-                          >
-                            {pendingResponse === row.responseId && pendingValue === value ? <Loader2 size={13} /> : value}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="numeric">{formatDateTime(row.updatedAt)}</td>
-                  </tr>
+                      <span className="tag">{feedbackBlock.rows.length} Annotator:innen</span>
+                    </div>
+                    <div className="table-wrap">
+                      <table className="table correction-feedback-table">
+                        <thead>
+                          <tr>
+                            <th>Teilnehmer:in</th>
+                            <th>Wert</th>
+                            <th>Aktualisiert</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {feedbackBlock.rows.map((row) => (
+                            <tr key={row.responseId}>
+                              <td>
+                                <strong>{row.participantPseudonym}</strong>
+                                <div className="muted small">
+                                  {row.participantCode} · {row.participantStatus}
+                                </div>
+                              </td>
+                              <td>
+                                <div className="rating-edit-control" role="group" aria-label={`Bewertung ${row.questionKey} ändern`}>
+                                  {[1, 2, 3, 4, 5, 6, 7].map((value) => (
+                                    <button
+                                      className={row.value === value ? "selected" : ""}
+                                      type="button"
+                                      key={value}
+                                      disabled={Boolean(pendingResponse)}
+                                      onClick={() => setValue(row, value)}
+                                      title={row.questionLabels?.[value - 1] || `Wert ${value}`}
+                                    >
+                                      {pendingResponse === row.responseId && pendingValue === value ? <Loader2 size={13} /> : value}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="numeric">{formatDateTime(row.updatedAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <section className="panel">
           <div className="empty-state">Keine Bewertungen für diese Filter vorhanden.</div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }
@@ -1747,6 +2145,7 @@ export default function AdminPage() {
     importParticipantGroups: useMutation(api.study.importParticipantGroups),
     importMaterials: useMutation(api.study.importMaterials),
     importAutomaticRankings: useMutation(api.study.importAutomaticRankings),
+    importAutomaticPairwiseDetails: useMutation(api.study.importAutomaticPairwiseDetails),
     syncFixedQuestions: useMutation(api.study.syncFixedQuestions),
     generateAssignments: useMutation(api.study.generateAssignments),
     setStudyStatus: useMutation(api.study.setStudyStatus),
@@ -1816,6 +2215,7 @@ export default function AdminPage() {
       importParticipantGroups: wrap(rawActions.importParticipantGroups),
       importMaterials: wrap(rawActions.importMaterials),
       importAutomaticRankings: wrap(rawActions.importAutomaticRankings),
+      importAutomaticPairwiseDetails: wrap(rawActions.importAutomaticPairwiseDetails),
       syncFixedQuestions: wrap(rawActions.syncFixedQuestions),
       generateAssignments: wrap(rawActions.generateAssignments),
       setStudyStatus: wrap(rawActions.setStudyStatus),
@@ -1832,6 +2232,7 @@ export default function AdminPage() {
     rawActions.generateAssignments,
     rawActions.generatePromptImageUploadUrl,
     rawActions.importAutomaticRankings,
+    rawActions.importAutomaticPairwiseDetails,
     rawActions.importMaterials,
     rawActions.importParticipantGroups,
     rawActions.reopenParticipant,

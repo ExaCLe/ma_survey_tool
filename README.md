@@ -120,6 +120,14 @@ Zeilen mit `surveyMethodKey` werden in `Ergebnisse` gegen die Human-Ratings gema
 
 Unter `Ergebnisse` -> `Bradley-Terry Rankingvergleich` wird für die Human-Ratings ein explizites Ranking berechnet: pro Annotator:in und Essay wird ausschließlich die letzte Frage `gesamt_hilfreich` zur Gesamt-Hilfreichkeit verwendet, daraus werden paarweise Siege/Ties zwischen Methoden gebildet, und daraus werden Bradley-Terry-Ability-Werte geschätzt. Zusätzlich gibt es eine Essay-Ansicht mit aggregiertem Essay-Ranking und den individuellen Annotator:innen-Rankings pro Essay. Die aktuell importierte Automatic-Ranking-CSV enthält nur Overall-Methodenränge; diese Overall-Automatikränge werden deshalb als Vergleichsspalten neben Overall-, Essay- und Annotator:innen-Rankings angezeigt.
 
+Für den tieferen Vergleich kannst du zusätzlich die Pairwise-Details-CSV importieren:
+
+```text
+../ma_thesis_code/results/llm_pipeline/helpfulness_pairwise/manual_annotation_survey_pairwise/manual_annotation_survey_pairwise_v41/analysis/survey_pairwise_human_comparison_details.csv
+```
+
+Diese Datei enthält pro Essay und Methodenpaar die Modell-Mehrheit, einzelne Judge-Gewinner, Combined-BT-Reihenfolge und automatische Pairwise-Ränge. Nach dem Import zeigt `Ergebnisse` -> `Pairwise Deep Dive`, ob die Human-Mehrheit aus `gesamt_hilfreich` je Essay/Paar mit Modell-Mehrheit, Combined-BT-Order und einzelnen Judges übereinstimmt.
+
 ## Beispieldateien neu erzeugen
 
 Das Skript [scripts/prepare_survey_imports.py](scripts/prepare_survey_imports.py) liest standardmäßig `../ma_thesis_code/results/llm_pipeline/catalog.sqlite` und schreibt die beiden CSV-Dateien nach `sample_data/`.
