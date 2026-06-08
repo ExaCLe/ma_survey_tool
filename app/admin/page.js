@@ -41,6 +41,18 @@ const nav = [
   ["settings", "Einstellungen", Settings]
 ];
 
+const METHOD_ORDER = ["baseline", "direct", "single"];
+
+function compareMethodKeys(a, b) {
+  const normalizedA = String(a || "").trim().toLowerCase();
+  const normalizedB = String(b || "").trim().toLowerCase();
+  const indexA = METHOD_ORDER.indexOf(normalizedA);
+  const indexB = METHOD_ORDER.indexOf(normalizedB);
+  const orderA = indexA === -1 ? METHOD_ORDER.length : indexA;
+  const orderB = indexB === -1 ? METHOD_ORDER.length : indexB;
+  return orderA - orderB || String(a || "").localeCompare(String(b || ""));
+}
+
 function statusLabel(status) {
   return { draft: "Entwurf", active: "Aktiv", closed: "Geschlossen" }[status] || status;
 }
@@ -577,7 +589,7 @@ function ImportSection({ password, data, actions }) {
     try {
       const rows = parseAutomaticRankingRows(automaticCsv);
       const mappedRows = rows.filter((row) => row.surveyMethodKey);
-      const currentMethodKeys = [...new Set((data?.feedbacks || []).map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+      const currentMethodKeys = [...new Set((data?.feedbacks || []).map((feedback) => feedback.methodKey))].sort(compareMethodKeys);
       const mappedKeys = new Set(mappedRows.map((row) => row.surveyMethodKey));
       return {
         rows,
@@ -1072,7 +1084,7 @@ function ResultsSection({ password, data, exportCsv, reopenParticipant }) {
   const pairwiseDeepComparison = analytics.pairwiseDeepComparison || {};
   const pairwiseEssayRows = pairwiseDeepComparison.byEssay || [];
   const pairwiseDisagreementRows = pairwiseDeepComparison.disagreementRows || [];
-  const methodKeys = methodStats.map((row) => row.methodKey);
+  const methodKeys = methodStats.map((row) => row.methodKey).sort(compareMethodKeys);
   const methodQuestionByKey = new Map(methodQuestionStats.map((row) => [`${row.questionKey}:${row.methodKey}`, row]));
   const essayKeys = [...new Set(essayMethodStats.map((row) => row.essayKey))];
   const essayMethodByKey = new Map(essayMethodStats.map((row) => [`${row.essayKey}:${row.methodKey}`, row]));
@@ -1860,7 +1872,7 @@ function CorrectionSection({ password, data, updateResponse }) {
     .filter((participant) => rows.some((row) => row.participantId === participant._id && (groupFilter === "all" || row.groupId === groupFilter)))
     .sort((a, b) => a.code.localeCompare(b.code));
   const questionOptions = [...new Map(rows.map((row) => [row.questionId, row])).values()].sort((a, b) => a.questionOrder - b.questionOrder);
-  const methodOptions = [...new Set(rows.map((row) => row.methodKey))].sort((a, b) => a.localeCompare(b));
+  const methodOptions = [...new Set(rows.map((row) => row.methodKey))].sort(compareMethodKeys);
   const normalizedSearch = search.trim().toLowerCase();
   const filteredRows = rows.filter((row) => {
     if (groupFilter !== "all" && row.groupId !== groupFilter) return false;
@@ -1891,8 +1903,8 @@ function CorrectionSection({ password, data, updateResponse }) {
       a.groupKey.localeCompare(b.groupKey) ||
       a.essayKey.localeCompare(b.essayKey) ||
       a.questionOrder - b.questionOrder ||
+      compareMethodKeys(a.methodKey, b.methodKey) ||
       a.feedbackOrder - b.feedbackOrder ||
-      a.methodKey.localeCompare(b.methodKey) ||
       a.participantCode.localeCompare(b.participantCode)
   );
   for (const row of orderedRows) {

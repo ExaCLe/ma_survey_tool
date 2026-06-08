@@ -5,6 +5,7 @@ import { internalAction, mutation, query } from "./_generated/server";
 const STUDY_KEY = "single-study";
 const DEFAULT_NOTIFICATION_EMAIL = "leon.biermann@gmx.net";
 const OVERALL_HELPFULNESS_QUESTION_KEY = "gesamt_hilfreich";
+const METHOD_ORDER = ["baseline", "direct", "single"];
 const FIXED_QUESTIONS = [
   {
     key: "verstaendlichkeit",
@@ -73,6 +74,16 @@ function requireAdmin(adminPassword) {
 
 function now() {
   return Date.now();
+}
+
+function compareMethodKeys(a, b) {
+  const normalizedA = String(a || "").trim().toLowerCase();
+  const normalizedB = String(b || "").trim().toLowerCase();
+  const indexA = METHOD_ORDER.indexOf(normalizedA);
+  const indexB = METHOD_ORDER.indexOf(normalizedB);
+  const orderA = indexA === -1 ? METHOD_ORDER.length : indexA;
+  const orderB = indexB === -1 ? METHOD_ORDER.length : indexB;
+  return orderA - orderB || String(a || "").localeCompare(String(b || ""));
 }
 
 function formatNotificationDate(timestamp) {
@@ -587,17 +598,20 @@ function rankRows(rows, scoreKey, rankKey = "rank", descending = true) {
   const ranked = [...rows].sort((a, b) => {
     const scoreA = Number.isFinite(a[scoreKey]) ? a[scoreKey] : descending ? -Infinity : Infinity;
     const scoreB = Number.isFinite(b[scoreKey]) ? b[scoreKey] : descending ? -Infinity : Infinity;
-    return descending ? scoreB - scoreA || a.methodKey.localeCompare(b.methodKey) : scoreA - scoreB || a.methodKey.localeCompare(b.methodKey);
+    return descending ? scoreB - scoreA || compareMethodKeys(a.methodKey, b.methodKey) : scoreA - scoreB || compareMethodKeys(a.methodKey, b.methodKey);
   });
   let previousScore = null;
   let previousRank = 0;
-  return ranked.map((row, index) => {
+  const rankByMethod = new Map();
+  for (let index = 0; index < ranked.length; index += 1) {
+    const row = ranked[index];
     const score = row[scoreKey];
     const rank = Number.isFinite(score) && score === previousScore ? previousRank : index + 1;
     previousScore = score;
     previousRank = rank;
-    return { ...row, [rankKey]: rank };
-  });
+    rankByMethod.set(row.methodKey, rank);
+  }
+  return rows.map((row) => ({ ...row, [rankKey]: rankByMethod.get(row.methodKey) }));
 }
 
 function fitBradleyTerry(methodKeys, comparisons) {
@@ -692,20 +706,20 @@ function automaticRankingComparison(data) {
       methodKey: group.methodKey,
       ...describeValues(group.values)
     }))
-    .sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => compareMethodKeys(a.methodKey, b.methodKey));
   const automaticBySurveyMethod = new Map(
     data.automaticRankings
       .filter((ranking) => ranking.surveyMethodKey)
       .map((ranking) => [ranking.surveyMethodKey, ranking])
   );
-  const feedbackMethodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+  const feedbackMethodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort(compareMethodKeys);
   const humanRankByMethod = new Map();
-  const sortedHumanStats = [...methodStats].sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
+  const sortedHumanStats = [...methodStats].sort((a, b) => (b.mean || 0) - (a.mean || 0) || compareMethodKeys(a.methodKey, b.methodKey));
   for (let index = 0; index < sortedHumanStats.length; index += 1) {
     humanRankByMethod.set(sortedHumanStats[index].methodKey, index + 1);
   }
 
-  const rows = sortedHumanStats.map((method) => {
+  const rows = methodStats.map((method) => {
     const automatic = automaticBySurveyMethod.get(method.methodKey);
     const humanRank = humanRankByMethod.get(method.methodKey);
     return {
@@ -730,7 +744,7 @@ function automaticRankingComparison(data) {
 
   const rowsWithAutomaticRank = rows
     .filter((row) => Number.isFinite(row.humanRank) && Number.isFinite(row.automaticCombinedRank))
-    .sort((a, b) => a.automaticCombinedRank - b.automaticCombinedRank || a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => a.automaticCombinedRank - b.automaticCombinedRank || compareMethodKeys(a.methodKey, b.methodKey));
   const automaticRankWithinMappedMethods = new Map();
   for (let index = 0; index < rowsWithAutomaticRank.length; index += 1) {
     automaticRankWithinMappedMethods.set(rowsWithAutomaticRank[index].methodKey, index + 1);
@@ -743,7 +757,7 @@ function automaticRankingComparison(data) {
   const mappedSurveyMethodKeys = data.automaticRankings
     .filter((ranking) => ranking.surveyMethodKey)
     .map((ranking) => ranking.surveyMethodKey)
-    .sort((a, b) => a.localeCompare(b));
+    .sort(compareMethodKeys);
   const missingSurveyMethodKeys = feedbackMethodKeys.filter((methodKey) => !automaticBySurveyMethod.has(methodKey));
   const unmappedAutomaticApproaches = data.automaticRankings
     .filter((ranking) => !ranking.surveyMethodKey)
@@ -791,7 +805,7 @@ function humanRankingComparison(data) {
   const questionById = new Map(data.questions.map((question) => [question._id, question]));
   const topicById = new Map(data.topics.map((topic) => [topic._id, topic]));
   const automaticByMethod = automaticRowsBySurveyMethod(data);
-  const methodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort((a, b) => a.localeCompare(b));
+  const methodKeys = [...new Set(data.feedbacks.map((feedback) => feedback.methodKey))].sort(compareMethodKeys);
   const ratingContexts = new Map();
 
   for (const response of data.responses) {
@@ -825,7 +839,7 @@ function humanRankingComparison(data) {
         value: values.reduce((sum, value) => sum + value, 0) / values.length
       }))
       .filter((row) => Number.isFinite(row.value))
-      .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+      .sort((a, b) => compareMethodKeys(a.methodKey, b.methodKey));
     if (methodValues.length < 2) continue;
 
     const essayKey = context.essay.key;
@@ -883,7 +897,7 @@ function humanRankingComparison(data) {
     .map(([essayKey, valuesByMethod]) => {
       const essay = data.essays.find((item) => item.key === essayKey);
       const topic = essay ? topicById.get(essay.topicId) : null;
-      const essayMethodKeys = [...valuesByMethod.keys()].sort((a, b) => a.localeCompare(b));
+      const essayMethodKeys = [...valuesByMethod.keys()].sort(compareMethodKeys);
       const rows = describePairwiseRanking(essayMethodKeys, valuesByMethod, essayComparisons.get(essayKey) || []).map((row) => ({
         ...row,
         ...(automaticByMethod.get(row.methodKey) || {}),
@@ -902,8 +916,8 @@ function humanRankingComparison(data) {
         annotatorRows: (annotatorRankingsByEssay.get(essayKey) || []).sort(
           (a, b) =>
             a.participantCode.localeCompare(b.participantCode) ||
-            a.humanRank - b.humanRank ||
-            a.methodKey.localeCompare(b.methodKey)
+            compareMethodKeys(a.methodKey, b.methodKey) ||
+            a.humanRank - b.humanRank
         )
       };
     })
@@ -1187,7 +1201,7 @@ function resultsAnalytics(data) {
       methodKey: group.methodKey,
       ...describeValues(group.values)
     }))
-    .sort((a, b) => (b.mean || 0) - (a.mean || 0) || a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => compareMethodKeys(a.methodKey, b.methodKey));
 
   const questionStats = [...questionGroups.values()]
     .map((group) => ({
@@ -1206,7 +1220,7 @@ function resultsAnalytics(data) {
       methodKey: group.methodKey,
       ...describeValues(group.values)
     }))
-    .sort((a, b) => a.questionOrder - b.questionOrder || a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => a.questionOrder - b.questionOrder || compareMethodKeys(a.methodKey, b.methodKey));
 
   const essayMethodStats = [...essayMethodGroups.values()]
     .map((group) => ({
@@ -1217,7 +1231,7 @@ function resultsAnalytics(data) {
       methodKey: group.methodKey,
       ...describeValues(group.values)
     }))
-    .sort((a, b) => a.essayKey.localeCompare(b.essayKey) || a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => a.essayKey.localeCompare(b.essayKey) || compareMethodKeys(a.methodKey, b.methodKey));
 
   const ratingDistributions = [...methodGroups.values()]
     .map((group) => ({
@@ -1226,7 +1240,7 @@ function resultsAnalytics(data) {
       mean: describeValues(group.values).mean,
       counts: countsByLikert(group.values)
     }))
-    .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+    .sort((a, b) => compareMethodKeys(a.methodKey, b.methodKey));
 
   return {
     methodStats,
@@ -1291,8 +1305,8 @@ function editableResponseRows(data) {
         a.participantCode.localeCompare(b.participantCode) ||
         a.essayKey.localeCompare(b.essayKey) ||
         a.questionOrder - b.questionOrder ||
-        a.feedbackOrder - b.feedbackOrder ||
-        a.methodKey.localeCompare(b.methodKey)
+        compareMethodKeys(a.methodKey, b.methodKey) ||
+        a.feedbackOrder - b.feedbackOrder
     );
 }
 
@@ -1323,7 +1337,7 @@ function methodComparisons(data) {
         methodKey,
         value: values.reduce((sum, value) => sum + value, 0) / values.length
       }))
-      .sort((a, b) => a.methodKey.localeCompare(b.methodKey));
+      .sort((a, b) => compareMethodKeys(a.methodKey, b.methodKey));
 
     for (let i = 0; i < methodValues.length; i += 1) {
       for (let j = i + 1; j < methodValues.length; j += 1) {
@@ -1361,8 +1375,8 @@ function methodComparisons(data) {
       const sortA = a.scopeKey === "all" ? 0 : (data.questions.find((question) => question.key === a.scopeKey)?.order || 0) + 1;
       const sortB = b.scopeKey === "all" ? 0 : (data.questions.find((question) => question.key === b.scopeKey)?.order || 0) + 1;
       if (sortA !== sortB) return sortA - sortB;
-      const methodSort = a.methodA.localeCompare(b.methodA);
-      return methodSort || a.methodB.localeCompare(b.methodB);
+      const methodSort = compareMethodKeys(a.methodA, b.methodA);
+      return methodSort || compareMethodKeys(a.methodB, b.methodB);
     });
 }
 
